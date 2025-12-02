@@ -322,8 +322,9 @@ _VGM_ADDRESS_FTDI2XX_LOOP:
     move.b  (%a0),%d0                         | +8 24   Get Address Idx(Lo 4bit) and Data(Hi 2bit)
     | Get Write Address
     | 0CDDAAAA -> DDAAAA00
-    lsl.b   #2,%d0                            |+10 34   Shift Left
-    move.l  (%d0, %a1), %a2                   |+16 50   Get Register Address
+    add.b   %d0,%d0                           | +4 28   Shift Left
+    add.b   %d0,%d0                           | +4 32   Shift Left
+    move.l  (%d0, %a1), %a2                   |+16 48   Get Register Address
 
 _VGM_DATA_FTDI2XX_LOOP:
     btst.b  %d2,(%a0)                         | +8 8    Check CLK

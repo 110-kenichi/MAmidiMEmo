@@ -1495,8 +1495,10 @@ namespace zanac.VGMPlayer
                 case VsifSoundModuleType.MSX_FTDI:
                 case VsifSoundModuleType.TurboR_FTDI:
                 case VsifSoundModuleType.MSX_Pi:
-                case VsifSoundModuleType.MSX_PiTR:
                     comPortOPNA.DeferredWriteData(0x10, (byte)adrs, (byte)dt, (int)Program.Default.BitBangWaitOPNA);
+                    break;
+                case VsifSoundModuleType.MSX_PiTR:
+                    comPortOPNA.DeferredWriteData(0x30, (byte)adrs, (byte)dt, -2);
                     break;
                 case VsifSoundModuleType.SpfmLight:
                 case VsifSoundModuleType.Spfm:
@@ -1595,10 +1597,16 @@ namespace zanac.VGMPlayer
                     }
                     break;
                 case VsifSoundModuleType.MSX_Pi:
+                    {
+                        comPortOPNA.DeferredWriteData(0x11, (byte)adrs, (byte)dt, 0);
+                    }
+                    break;
                 case VsifSoundModuleType.MSX_PiTR:
                     {
-                        int wait = (int)Program.Default.BitBangWaitOPNA;
-                        comPortOPNA.DeferredWriteData(0x11, (byte)adrs, (byte)dt, wait);
+                        if (adrs <= 0x10)
+                            comPortOPNA.DeferredWriteData(0x31, (byte)adrs, (byte)dt, -3);
+                        else
+                            comPortOPNA.DeferredWriteData(0x31, (byte)adrs, (byte)dt, -2);
                     }
                     break;
                 case VsifSoundModuleType.SpfmLight:

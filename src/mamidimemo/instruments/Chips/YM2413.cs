@@ -1,4 +1,11 @@
 ﻿// copyright-holders:K.Ito
+using FM_SoundConvertor;
+using Melanchall.DryWetMidi.Common;
+using Melanchall.DryWetMidi.Core;
+using Melanchall.DryWetMidi.MusicTheory;
+using Newtonsoft.Json;
+using Omu.ValueInjecter;
+using Omu.ValueInjecter.Injections;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -7,19 +14,14 @@ using System.Drawing.Design;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Runtime.Serialization;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using FM_SoundConvertor;
-using Melanchall.DryWetMidi.Common;
-using Melanchall.DryWetMidi.Core;
-using Melanchall.DryWetMidi.MusicTheory;
-using Newtonsoft.Json;
-using Omu.ValueInjecter;
-using Omu.ValueInjecter.Injections;
+using System.Windows.Markup;
 using zanac.MAmidiMEmo.ComponentModel;
 using zanac.MAmidiMEmo.Gimic;
 using zanac.MAmidiMEmo.Gui;
@@ -227,7 +229,7 @@ namespace zanac.MAmidiMEmo.Instruments.Chips
                             }
 
                             f_CurrentSoundEngineType = f_SoundEngineType;
-                            enableOpll(ExtOPLLSlot, true);
+                            enableOpll(ExtOPLLSlot, 2, true, f_ftdiClkWidth);
                             SetDevicePassThru(true);
                         }
                         else
@@ -428,9 +430,13 @@ namespace zanac.MAmidiMEmo.Instruments.Chips
                     switch (CurrentSoundEngine)
                     {
                         case SoundEngineType.VSIF_MSX_FTDI:
+                            enableOpll(value, 2, true, f_ftdiClkWidth);
+                            break;
                         case SoundEngineType.VSIF_MSX_Pi:
+                            enableOpll(value, 2, true, 0);
+                            break;
                         case SoundEngineType.VSIF_MSX_PiTr:
-                            enableOpll(value, true);
+                            enableOpll(value, 0x22, true, -2);
                             break;
                     }
                 }
@@ -441,13 +447,13 @@ namespace zanac.MAmidiMEmo.Instruments.Chips
         /// 
         /// </summary>
         /// <param name="slot"></param>
-        private void enableOpll(OPLLSlotNo slot, bool clearCache)
+        private void enableOpll(OPLLSlotNo slot, byte type, bool clearCache, int wait)
         {
             if (slot == OPLLSlotNo.MMIO_1 || slot == OPLLSlotNo.MMIO_2)
             {
                 lock (sndEnginePtrLock)
                 {
-                    vsifClient?.WriteData(2, (byte)0, (byte)(slot - 1), f_ftdiClkWidth);
+                    vsifClient?.WriteData(type, (byte)0, (byte)(slot - 1), wait);
                 }
             }
             if (clearCache)
@@ -711,17 +717,26 @@ namespace zanac.MAmidiMEmo.Instruments.Chips
                             break;
                         case SoundEngineType.VSIF_MSX_FTDI:
                         case SoundEngineType.VSIF_MSX_Pi:
+                            {
+                                int wait = f_ftdiClkWidth;
+                                if (CurrentSoundEngine == SoundEngineType.VSIF_MSX_Pi)
+                                    wait = 0;
+                                enableOpll(f_extOPLLSlot, 2, false, wait);
+                                if (f_extOPLLSlot == OPLLSlotNo.IO)
+                                    vsifClient.WriteData(1, address, data, wait);
+                                else
+                                    vsifClient.WriteData(0xC, address, data, wait);
+                            }
+                            break;
                         case SoundEngineType.VSIF_MSX_PiTr:
-                            int wait = f_ftdiClkWidth;
-                            if (CurrentSoundEngine == SoundEngineType.VSIF_MSX_Pi)
-                                wait = 0;
-                            else if (CurrentSoundEngine == SoundEngineType.VSIF_MSX_PiTr)
-                                wait = -1;
-                            enableOpll(f_extOPLLSlot, false);
-                            if (f_extOPLLSlot == OPLLSlotNo.IO)
-                                vsifClient.WriteData(1, address, data, wait);
-                            else
-                                vsifClient.WriteData(0xC, address, data, wait);
+                            {
+                                int wait = -2;
+                                enableOpll(f_extOPLLSlot, 0x22, false, wait);
+                                if (f_extOPLLSlot == OPLLSlotNo.IO)
+                                    vsifClient.WriteData(0x21, address, data, wait);
+                                else
+                                    vsifClient.WriteData(0x2C, address, data, wait);
+                            }
                             break;
                         case SoundEngineType.VSIF_NES_FTDI_VRC6:
                             if (!UseAltVRC7Cart)
@@ -928,7 +943,18 @@ namespace zanac.MAmidiMEmo.Instruments.Chips
         {
             base.ClearWrittenDataCache();
 
-            enableOpll(f_extOPLLSlot, false);
+            switch (CurrentSoundEngine)
+            {
+                case SoundEngineType.VSIF_MSX_FTDI:
+                    enableOpll(f_extOPLLSlot, 2, false, f_ftdiClkWidth);
+                    break;
+                case SoundEngineType.VSIF_MSX_Pi:
+                    enableOpll(f_extOPLLSlot, 2, false, 0);
+                    break;
+                case SoundEngineType.VSIF_MSX_PiTr:
+                    enableOpll(f_extOPLLSlot, 0x22, false, -2);
+                    break;
+            }
         }
 
         /// <summary>

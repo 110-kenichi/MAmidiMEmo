@@ -797,7 +797,6 @@ namespace zanac.MAmidiMEmo.Instruments.Chips
                         case SoundEngineType.VSIF_MSX_FTDI:
                         case SoundEngineType.VSIF_P6_FTDI:
                         case SoundEngineType.VSIF_MSX_Pi:
-                        case SoundEngineType.VSIF_MSX_PiTr:
                             if (address < 0x100)
                                 vsifClient.WriteData(0x10, (byte)address, (byte)data, f_ftdiClkWidth);
                             else
@@ -806,6 +805,19 @@ namespace zanac.MAmidiMEmo.Instruments.Chips
                                     vsifClient.WriteData(0x13, (byte)0xb, (byte)data, f_ftdiClkWidth);
                                 else
                                     vsifClient.WriteData(0x11, (byte)(address & 0xff), (byte)data, f_ftdiClkWidth);
+                            }
+                            break;
+                        case SoundEngineType.VSIF_MSX_PiTr:
+                            if (address < 0x100)
+                                vsifClient.WriteData(0x30, (byte)address, (byte)data, -2);
+                            else
+                            {
+                                if (address == 0x10b)
+                                    vsifClient.WriteData(0x13, (byte)0xb, (byte)data, f_ftdiClkWidth);
+                                else if (address <= 0x110)
+                                    vsifClient.WriteData(0x31, (byte)(address & 0xff), (byte)data, -3);
+                                else
+                                    vsifClient.WriteData(0x31, (byte)(address & 0xff), (byte)data, -2);
                             }
                             break;
                         case SoundEngineType.VSIF_PC88_FTDI:

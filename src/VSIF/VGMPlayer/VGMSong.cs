@@ -6180,19 +6180,29 @@ namespace zanac.VGMPlayer
                     comPortOPLL.DeferredWriteData(0, (byte)(adrs + 1), (byte)dt, (int)Program.Default.BitBangWaitOPLL);
                     break;
                 case VsifSoundModuleType.MSX_Pi:
-                case VsifSoundModuleType.MSX_PiTR:
                     {
                         int wait = 0;
-                        if (comPortOPLL.SoundModuleType == VsifSoundModuleType.MSX_PiTR)
-                            wait = 1;
 
                         var slot = (int)comPortOPLL.Tag["OPLL.Slot"];
                         if (slot == 1 || slot == 2)
-                            comPortOPLL.DeferredWriteData(2, (byte)0, (byte)(slot - 1), -wait);
+                            comPortOPLL.DeferredWriteData(2, (byte)0, (byte)(slot - 1), wait);
                         if ((int)comPortOPLL.Tag["OPLL.Slot"] == 0)
-                            comPortOPLL.DeferredWriteData(1, (byte)adrs, (byte)dt, -wait);
+                            comPortOPLL.DeferredWriteData(1, (byte)adrs, (byte)dt, wait);
                         else
-                            comPortOPLL.DeferredWriteData(0xC, (byte)adrs, (byte)dt, -wait);
+                            comPortOPLL.DeferredWriteData(0xC, (byte)adrs, (byte)dt, wait);
+                    }
+                    break;
+                case VsifSoundModuleType.MSX_PiTR:
+                    {
+                        int wait = -2;
+
+                        var slot = (int)comPortOPLL.Tag["OPLL.Slot"];
+                        if (slot == 1 || slot == 2)
+                            comPortOPLL.DeferredWriteData(0x22, (byte)0, (byte)(slot - 1), wait);
+                        if ((int)comPortOPLL.Tag["OPLL.Slot"] == 0)
+                            comPortOPLL.DeferredWriteData(0x21, (byte)adrs, (byte)dt, wait);
+                        else
+                            comPortOPLL.DeferredWriteData(0x2C, (byte)adrs, (byte)dt, wait);
                     }
                     break;
             }
