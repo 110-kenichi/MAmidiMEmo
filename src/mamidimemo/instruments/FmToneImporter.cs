@@ -87,6 +87,9 @@ namespace zanac.MAmidiMEmo.Instruments
                         case ".VGI":
                             tones = Vgi.Reader(file);
                             break;
+                        case ".TFI":
+                            tones = Tfi.Reader(file);
+                            break;
                         default:
 
                             break;

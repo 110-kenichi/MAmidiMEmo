@@ -207,7 +207,7 @@ namespace FM_SoundConvertor
         {
             get
             {
-                return "*.muc;*.dat;*.mwi;*.mml;*.fxb;*.gwi;*.bnk;*.syx;*.ff;*.ffopm;*.vgi";
+                return "*.muc;*.dat;*.mwi;*.mml;*.fxb;*.gwi;*.bnk;*.syx;*.ff;*.ffopm;*.vgi;*.tfi";
             }
         }
 
@@ -256,6 +256,9 @@ namespace FM_SoundConvertor
                         break;
                     case ".VGI":
                         tones = Vgi.Reader(file);
+                        break;
+                    case ".TFI":
+                        tones = Tfi.Reader(file);
                         break;
                 }
             }

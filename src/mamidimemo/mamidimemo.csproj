@@ -699,6 +699,7 @@
     <Compile Include="TurboLink\Edio.cs" />
     <Compile Include="TurboLink\TurboEvedriveManager.cs" />
     <Compile Include="Util\FITOM\BankReader.cs" />
+    <Compile Include="Util\FM-SoundConvertor\Tfi.cs" />
     <Compile Include="Util\FM-SoundConvertor\Vgi.cs" />
     <Compile Include="Util\FM-SoundConvertor\FFOPM.cs" />
     <Compile Include="Util\FM-SoundConvertor\FF.cs" />

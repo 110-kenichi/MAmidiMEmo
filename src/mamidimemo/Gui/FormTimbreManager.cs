@@ -780,7 +780,13 @@ namespace zanac.MAmidiMEmo.Gui
                                     no = loadTones(no, tones);
                                 }
                                 break;
-
+                            case ".TFI":
+                                if (Instrument.CanImportToneFile)
+                                {
+                                    var tones = Tfi.Reader(file);
+                                    no = loadTones(no, tones);
+                                }
+                                break;
                             default:
                                 if (Instrument.CanImportBinFile)
                                 {
