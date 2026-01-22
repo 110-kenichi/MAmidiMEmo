@@ -1,4 +1,4 @@
-MAmidiMEmo 6.4.3.1 Itoken (c)2019, 2025 / GPL-2.0
+MAmidiMEmo 6.4.3.2 Itoken (c)2019, 2026 / GPL-2.0
 
 *** What is the MAmidiMEmo? ***
 
@@ -278,6 +278,9 @@ e.g.) YM2151 has 8ch FM sounds, so you can play 8 chords on MIDI 1ch or sharing 
    [![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=SNQ9JE3JAQMNQ)
 
 *** Changes
+- 6.4.3.2 - Fixed old YM2610B ADPCM settings loading issue.
+  - Fixed YM2610B Key on/off issue.
+  - Fixed SCC Key on/off issue.
 - 6.4.3.1 Fixed *.tfi file importing for FM chips.
 - 6.4.3.0 Supported *.tfi file importing for FM chips.
 - 6.4.2.2 Fixed MSXπ UART(i8251) OPLL, OPNA timing issue.

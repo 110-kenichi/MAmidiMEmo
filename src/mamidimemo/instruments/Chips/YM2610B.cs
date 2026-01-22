@@ -1672,6 +1672,9 @@ namespace zanac.MAmidiMEmo.Instruments.Chips
                         {
                             OnPitchUpdated();
                             OnVolumeUpdated();
+
+                            if (((int)lastSoundType & 4) != 0)
+                                parentModule.YM2610BWriteData(unitNumber, (byte)(13), 0, 0, parentModule.EnvelopeType, false);
                         }
                         break;
                     case ToneType.ADPCM_A:
@@ -2021,8 +2024,8 @@ namespace zanac.MAmidiMEmo.Instruments.Chips
                             ushort dfreq = (ushort)Math.Round(freq);
                             octave = octave << 3;
 
-                            parentModule.YM2610BWriteData(unitNumber, 0xa4, 0, ConvertSlot(Slot), (byte)(octave | ((dfreq >> 8) & 7)));
-                            parentModule.YM2610BWriteData(unitNumber, 0xa0, 0, ConvertSlot(Slot), (byte)(0xff & dfreq));
+                            parentModule.YM2610BWriteData(unitNumber, 0xa4, 0, ConvertSlot(Slot), (byte)(octave | ((dfreq >> 8) & 7)), false);
+                            parentModule.YM2610BWriteData(unitNumber, 0xa0, 0, ConvertSlot(Slot), (byte)(0xff & dfreq), false);
                         }
                         break;
                     case ToneType.SSG:
@@ -2057,7 +2060,7 @@ namespace zanac.MAmidiMEmo.Instruments.Chips
 
                                 parentModule.YM2610BWriteData(unitNumber, (byte)(12), 0, 0, parentModule.EnvelopeFrequencyCoarse);
                                 parentModule.YM2610BWriteData(unitNumber, (byte)(11), 0, 0, parentModule.EnvelopeFrequencyFine);
-                                parentModule.YM2610BWriteData(unitNumber, (byte)(13), 0, 0, parentModule.EnvelopeType);
+                                parentModule.YM2610BWriteData(unitNumber, (byte)(13), 0, 0, parentModule.EnvelopeType, false);
                                 break;
                             }
                         }

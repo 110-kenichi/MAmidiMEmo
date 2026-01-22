@@ -41,7 +41,7 @@ namespace zanac.MAmidiMEmo
         /// <summary>
         /// 
         /// </summary>
-        public const string FILE_VERSION = "6.4.3.1";
+        public const string FILE_VERSION = "6.4.3.2";
 
         public const string FILE_COPYRIGHT = @"Virtual chiptune sound MIDI module ""MAmidiMEmo"" Version {0}
 Copyright(C) 2019, 2025 Itoken.All rights reserved.";
@@ -535,6 +535,12 @@ Copyright(C) 2019, 2025 Itoken.All rights reserved.";
                 {
                     case "DeltaPcmSound":
                         typeName = "DeltaPcmTimbre";
+                        break;
+                    case "AdpcmSoundTable":
+                        typeName = "YM2610BAdpcmSoundTable";
+                        break;
+                    case "AdpcmTimbre":
+                        typeName = "YM2610BAdpcmTimbre";
                         break;
                 }
                 if (AssemblieTypes.ContainsKey(typeName))

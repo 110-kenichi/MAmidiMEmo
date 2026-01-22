@@ -618,6 +618,16 @@ namespace zanac.MAmidiMEmo.Instruments.Chips
         private void Scc1KeyOnOffWriteData(uint unitNumber, byte data)
         {
             byte address = 0;
+            switch (SCCChipType)
+            {
+                case SCCType.SCC1:
+                    address = (byte)(0xaf);
+                    break;
+                case SCCType.SCC1_Compat:
+                case SCCType.SCC:
+                    address = (byte)(0x8f);
+                    break;
+            }
             byte type = 0;
             lock (sndEnginePtrLock)
             {
@@ -630,12 +640,10 @@ namespace zanac.MAmidiMEmo.Instruments.Chips
                         {
                             case SCCType.SCC1:
                                 type = 4;
-                                address = (byte)(0xaf);
                                 break;
                             case SCCType.SCC1_Compat:
                             case SCCType.SCC:
                                 type = 5;
-                                address = (byte)(0x8f);
                                 break;
                         }
                         break;
@@ -668,19 +676,35 @@ namespace zanac.MAmidiMEmo.Instruments.Chips
         /// <summary>
         /// 
         /// </summary>
-        private static byte Scc1KeyOnOffReadData(uint unitNumber)
+        private byte Scc1KeyOnOffReadData(uint unitNumber)
         {
-            try
+            byte address = 0;
+            switch (SCCChipType)
             {
-                Program.SoundUpdating();
-                FlushDeferredWriteData();
+                case SCCType.SCC1:
+                    address = (byte)(0xaf);
+                    break;
+                case SCCType.SCC1_Compat:
+                case SCCType.SCC:
+                    address = (byte)(0x8f);
+                    break;
+            }
+            var dt = GetCachedWrittenData(address);
+            if (dt == null)
+                return 0;
+            else
+                return (byte)dt.Value;
+            //try
+            //{
+            //    Program.SoundUpdating();
+            //    FlushDeferredWriteData();
 
-                return SCC1_keyonoff_r(unitNumber, 0);
-            }
-            finally
-            {
-                Program.SoundUpdated();
-            }
+            //    return SCC1_keyonoff_r(unitNumber, 0);
+            //}
+            //finally
+            //{
+            //    Program.SoundUpdated();
+            //}
         }
 
         /// <summary>
@@ -1043,7 +1067,7 @@ namespace zanac.MAmidiMEmo.Instruments.Chips
                 //Volume
                 OnVolumeUpdated();
 
-                byte data = Scc1KeyOnOffReadData(parentModule.UnitNumber);
+                byte data = parentModule.Scc1KeyOnOffReadData(parentModule.UnitNumber);
                 data |= (byte)(1 << Slot);
                 parentModule.Scc1KeyOnOffWriteData(parentModule.UnitNumber, data);
             }
@@ -1150,7 +1174,7 @@ namespace zanac.MAmidiMEmo.Instruments.Chips
             {
                 base.SoundOff();
 
-                byte data = Scc1KeyOnOffReadData(parentModule.UnitNumber);
+                byte data = parentModule.Scc1KeyOnOffReadData(parentModule.UnitNumber);
                 data &= (byte)~(1 << Slot);
                 parentModule.Scc1KeyOnOffWriteData(parentModule.UnitNumber, data);
             }
