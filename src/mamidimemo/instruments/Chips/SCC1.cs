@@ -434,7 +434,7 @@ namespace zanac.MAmidiMEmo.Instruments.Chips
             {
                 lock (sndEnginePtrLock)
                 {
-                    if (CurrentSoundEngine == SoundEngineType.VSIF_MSX_FTDI)
+                    if (CurrentSoundEngine != SoundEngineType.Software)
                     {
                         enableScc(SCCChipType, ExtSCCSlot, false);
                         vsifClient.WriteData(type, (byte)(address & 0xff), (byte)data, f_ftdiClkWidth);
@@ -507,6 +507,7 @@ namespace zanac.MAmidiMEmo.Instruments.Chips
             {
                 switch (CurrentSoundEngine)
                 {
+                    case SoundEngineType.Software:
                     case SoundEngineType.VSIF_MSX_FTDI:
                     case SoundEngineType.VSIF_MSX_Pi:
                     case SoundEngineType.VSIF_MSX_PiTr:
@@ -529,7 +530,7 @@ namespace zanac.MAmidiMEmo.Instruments.Chips
             {
                 lock (sndEnginePtrLock)
                 {
-                    if (CurrentSoundEngine == SoundEngineType.VSIF_MSX_FTDI)
+                    if (CurrentSoundEngine != SoundEngineType.Software)
                     {
                         enableScc(SCCChipType, ExtSCCSlot, false);
                         vsifClient.WriteData(type, address, data, f_ftdiClkWidth);
@@ -560,6 +561,7 @@ namespace zanac.MAmidiMEmo.Instruments.Chips
             {
                 switch (CurrentSoundEngine)
                 {
+                    case SoundEngineType.Software:
                     case SoundEngineType.VSIF_MSX_FTDI:
                     case SoundEngineType.VSIF_MSX_Pi:
                     case SoundEngineType.VSIF_MSX_PiTr:
@@ -582,7 +584,7 @@ namespace zanac.MAmidiMEmo.Instruments.Chips
             {
                 lock (sndEnginePtrLock)
                 {
-                    if (CurrentSoundEngine == SoundEngineType.VSIF_MSX_FTDI)
+                    if (CurrentSoundEngine != SoundEngineType.Software)
                     {
                         lock (vsifClient.LockObject)
                         {
@@ -618,21 +620,12 @@ namespace zanac.MAmidiMEmo.Instruments.Chips
         private void Scc1KeyOnOffWriteData(uint unitNumber, byte data)
         {
             byte address = 0;
-            switch (SCCChipType)
-            {
-                case SCCType.SCC1:
-                    address = (byte)(0xaf);
-                    break;
-                case SCCType.SCC1_Compat:
-                case SCCType.SCC:
-                    address = (byte)(0x8f);
-                    break;
-            }
             byte type = 0;
             lock (sndEnginePtrLock)
             {
                 switch (CurrentSoundEngine)
                 {
+                    case SoundEngineType.Software:
                     case SoundEngineType.VSIF_MSX_FTDI:
                     case SoundEngineType.VSIF_MSX_Pi:
                     case SoundEngineType.VSIF_MSX_PiTr:
@@ -640,10 +633,12 @@ namespace zanac.MAmidiMEmo.Instruments.Chips
                         {
                             case SCCType.SCC1:
                                 type = 4;
+                                address = (byte)(0xaf);
                                 break;
                             case SCCType.SCC1_Compat:
                             case SCCType.SCC:
                                 type = 5;
+                                address = (byte)(0x8f);
                                 break;
                         }
                         break;
@@ -653,7 +648,7 @@ namespace zanac.MAmidiMEmo.Instruments.Chips
             {
                 lock (sndEnginePtrLock)
                 {
-                    if (CurrentSoundEngine == SoundEngineType.VSIF_MSX_FTDI)
+                    if (CurrentSoundEngine != SoundEngineType.Software)
                     {
                         enableScc(SCCChipType, ExtSCCSlot, false);
                         vsifClient.WriteData(type, address, data, f_ftdiClkWidth);
