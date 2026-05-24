@@ -1,0 +1,7 @@
+
+		ORG $0000
+Init:
+		DI 				; disable ints
+		HALT
+LOOP:
+		JP	LOOP

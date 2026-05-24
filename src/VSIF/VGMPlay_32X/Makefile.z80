@@ -1,0 +1,16 @@
+# Z80 assembler build rules for Marsdev
+# Place this at the end of your Makefile or include as needed
+
+Z80AS   = $(TOOLSBIN)/z80asm
+Z80BIN  = $(TOOLSBIN)/z80bin
+Z80SRC  = $(wildcard md_src/*.z80)
+Z80OBJ  = $(Z80SRC:.z80=.z80.o)
+
+md_src/%.z80.o: md_src/%.z80
+	@echo "Z80ASM $<"
+	@$(Z80AS) -o $@ $<
+
+# 例: Z80バイナリ生成（必要に応じて）
+md_src/%.z80.bin: md_src/%.z80.o
+	@echo "Z80BIN $<"
+	@$(Z80BIN) -o $@ $<
