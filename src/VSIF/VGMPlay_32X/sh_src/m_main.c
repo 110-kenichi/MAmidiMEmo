@@ -71,28 +71,28 @@ void Mars_Play_Beep_Short(void) {
         for (volatile int i = 0; i < 1000; i++) {
             // FIFOがフルなら1ステップ待つ
             while (MARS_PWM_CTRL & MARS_PWM_FIFO_FULL) { __asm__ __volatile__("nop"); }
-            MARS_PWM_MONO = 850;
+            MARS_PWM_MONO = 700;
         }
         
         // ローレベル (11サンプル)
         for (volatile int i = 0; i < 1000; i++) {
             while (MARS_PWM_CTRL & MARS_PWM_FIFO_FULL) { __asm__ __volatile__("nop"); }
-            MARS_PWM_MONO = 200;
+            MARS_PWM_MONO = 300;
         }
     }
 
     while (MARS_PWM_CTRL & MARS_PWM_FIFO_FULL) { __asm__ __volatile__("nop"); }
 
     // 4. 再生後の余韻待機（音が途切れて消滅するのを防ぐ）
-    // for (volatile int delay = 0; delay < 8000; delay++) {
-    //     __asm__ __volatile__("nop");
-    // }
+    for (volatile int delay = 0; delay < 8000; delay++) {
+        __asm__ __volatile__("nop");
+    }
 
     // 5. 出力停止
     MARS_PWM_CTRL = 0x0000;
 }
 
-extern void	VGMPlay_32X();
+extern void	VGMPlay_32X_Sub();
 
 // Primary CPU main loop
 int m_main(void) {
@@ -100,12 +100,23 @@ int m_main(void) {
 	Hw32xSetBGColor(0,0,0,0);
 	Hw32xDelay(1); // Wait for MD's first VInt to complete
 
-	HwMdPuts("MAMI VGM Player for 32X", 0x2000, 0, 0);
+	//HwMdPuts("MAMI VGM Player for 32X", 0x2000, 0, 0);
+
+    HwMdPuts(" READY TO PLAY.",0x2000, 0, 3);
+    //HwMdPuts("NOTE: PLEASE RESET AFTER RECONNECTED", 0x8000, 0, 3);
+
+    HwMdPuts("CONNECT P2 PORT PIN1-4,6-9 TO FTDI2XX.", 0x8000, 0, 5);
+
+    HwMdPuts("___________ ", 0x8000, 0, 7);
+    HwMdPuts("\\1 2 3 4 5/ FTDI2XX TX,RX,RTS,CTS,VCC", 0x8000, 0, 8);
+    HwMdPuts(" \\6 7 8 9/  FTDI2XX DTR,DCD,GND,DSR", 0x8000, 0, 9);
+    HwMdPuts("  -------   ", 0x8000, 0, 10);
+
 	StartVGMPlayer();	//Kick VGMPlayer
 
-	Mars_Play_Beep_Short();
+	//Mars_Play_Beep_Short();
 
-	VGMPlay_32X();
+	VGMPlay_32X_Sub();
 
 	//game loop
 	for(;;) {

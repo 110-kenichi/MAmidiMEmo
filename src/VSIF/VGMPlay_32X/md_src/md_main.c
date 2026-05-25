@@ -123,6 +123,15 @@ void main(void) {
 
 	SYS_disableInts();
 
+    HwMdPuts("MAMI VGM SOUND DRIVER BY ITOKEN", 0x8000, 0, 0);
+	if(VGMPlay_InitMCD() != 0)
+	{
+	    HwMdPuts("SUPER 32X MODE",0x2000, 0, 2);
+	}else
+	{
+	    HwMdPuts("SUPER 32X + MDCD MODE",0x2000, 0, 2);
+	}
+
 	//HwMdPuts("MAMI VGM Player for 32X", 0x0000, 0, 0);
 	
 	while(1) {

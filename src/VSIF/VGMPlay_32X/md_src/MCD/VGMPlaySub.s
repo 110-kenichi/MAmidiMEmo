@@ -10,7 +10,7 @@
 VGMPlay_InitMCD:
    	movem.l	%d1-%d7/%a0-%a6,-(%sp)
 
-    jsr     FindMCDBIOS
+    jsr     CheckMCDHardware
     bcs     McdBiosNotFound
 
 	jsr 	ResetSubCPU
