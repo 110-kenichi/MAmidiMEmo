@@ -113,8 +113,8 @@ namespace zanac.VGMPlayer
                     case VsifSoundModuleType.Genesis_Low:
                     case VsifSoundModuleType.Genesis_FTDI:
                         for (int i = 0; i < 3; i++)
-                            comPortDCSG.DeferredWriteData(0, 0x14, (byte)(0x80 | i << 5 | 0x1f), (int)Program.Default.BitBangWaitDCSG);
-                        comPortDCSG.DeferredWriteData(0, 0x14, (byte)(0x80 | 3 << 5 | 0x1f), (int)Program.Default.BitBangWaitDCSG);
+                            comPortDCSG.DeferredWriteData(0, 5 << 2, (byte)(0x80 | i << 5 | 0x1f), (int)Program.Default.BitBangWaitDCSG);
+                        comPortDCSG.DeferredWriteData(0, 5 << 2, (byte)(0x80 | 3 << 5 | 0x1f), (int)Program.Default.BitBangWaitDCSG);
                         break;
                     case VsifSoundModuleType.SMS:
                         for (int i = 0; i < 3; i++)
@@ -249,7 +249,7 @@ namespace zanac.VGMPlayer
                     //Genesis
                     comPortOPN2.DeferredWriteDataPrior(
                         new byte[] { 0, 0 },
-                        new byte[] { 0x04, 0x8 },
+                        new byte[] { 1 << 2, 2 << 2 },
                         new byte[] { (byte)adrs, (byte)dt },
                         (int)Program.Default.BitBangWaitOPN2);
                     break;
@@ -274,7 +274,7 @@ namespace zanac.VGMPlayer
                 default: //Genesis
                     comPortOPN2.DeferredWriteDataPrior(
                         new byte[] { 0, 0 },
-                        new byte[] { 0x0C, 0x10 },
+                        new byte[] { 3 << 2, 4 << 2 },
                         new byte[] { (byte)adrs, (byte)dt },
                         (int)Program.Default.BitBangWaitOPN2);
                     break;
@@ -1387,7 +1387,7 @@ namespace zanac.VGMPlayer
                 case VsifSoundModuleType.Genesis_FTDI:
                 case VsifSoundModuleType.Genesis:
                 case VsifSoundModuleType.Genesis_Low:
-                    comPortDCSG.DeferredWriteData(0, 0x14, (byte)data, (int)Program.Default.BitBangWaitDCSG);
+                    comPortDCSG.DeferredWriteData(0, 5 << 2, (byte)data, (int)Program.Default.BitBangWaitDCSG);
                     break;
                 case VsifSoundModuleType.SMS:
                     comPortDCSG.DeferredWriteData(0, 0xFF, (byte)data, (int)Program.Default.BitBangWaitDCSG);

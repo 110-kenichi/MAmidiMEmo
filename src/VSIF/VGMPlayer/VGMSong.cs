@@ -55,6 +55,7 @@ namespace zanac.VGMPlayer
         private VsifClient comPortMCD;
         private VsifClient comPortSAA;
         private VsifClient comPortPCE;
+        private VsifClient comPortPWM;
 
         private VsifClient comPortTurboRProxy;
 
@@ -107,8 +108,8 @@ namespace zanac.VGMPlayer
                     case VsifSoundModuleType.Genesis_Low:
                     case VsifSoundModuleType.Genesis_FTDI:
                         for (int i = 0; i < 3; i++)
-                            comPortDCSG.DeferredWriteData(0, 0x14, (byte)(0x80 | i << 5 | 0x1f), (int)Program.Default.BitBangWaitDCSG);
-                        comPortDCSG.DeferredWriteData(0, 0x14, (byte)(0x80 | 3 << 5 | 0x1f), (int)Program.Default.BitBangWaitDCSG);
+                            comPortDCSG.DeferredWriteData(0, 5 << 2, (byte)(0x80 | i << 5 | 0x1f), (int)Program.Default.BitBangWaitDCSG);
+                        comPortDCSG.DeferredWriteData(0, 5 << 2, (byte)(0x80 | 3 << 5 | 0x1f), (int)Program.Default.BitBangWaitDCSG);
                         break;
                     case VsifSoundModuleType.SMS:
                         for (int i = 0; i < 3; i++)
@@ -479,6 +480,11 @@ namespace zanac.VGMPlayer
                     DeferredWritePCE(0x00, ch);
                     DeferredWritePCE(0x04, 0);
                 }
+            }
+            //PWM
+            if (comPortPWM != null)
+            {
+                DeferredWritePWMReg(0, 0);
             }
 
             flushDeferredWriteDataAndWait();
@@ -1102,7 +1108,46 @@ namespace zanac.VGMPlayer
                     connectToPCE();
                 }
             }
+            if (curHead.lngHzPWM != 0 && curHead.lngVersion >= 0x00000151)
+            {
+                SongChipInformation += $"PWM@{curHead.lngHzPWM / 1000000f}MHz ";
+
+                if (Program.Default.PWM_Enable)
+                {
+                    connectToPWM();
+                }
+            }
             return (curHead, rawHead);
+        }
+
+        private bool connectToPWM()
+        {
+            if (comPortPWM == null)
+            {
+                switch (Program.Default.PWM_IF)
+                {
+                    case 0:
+                        if (comPortPWM == null)
+                        {
+                            comPortPWM = VsifManager.TryToConnectVSIF(VsifSoundModuleType.Genesis_FTDI,
+                                (PortId)Program.Default.PWM_Port);
+                            if (comPortPWM != null)
+                            {
+                                comPortPWM.ChipClockHz["PWM"] = 23011361;
+                                comPortPWM.ChipClockHz["PWM_org"] = 23011361;
+                                UseChipInformation += "PWM@23.011361MHz ";
+                            }
+                        }
+                        break;
+                }
+                if (comPortPWM != null)
+                {
+                    Accepted = true;
+
+                    return true;
+                }
+            }
+            return false;
         }
 
         private bool connectToPCE()
@@ -4828,7 +4873,23 @@ namespace zanac.VGMPlayer
                                             break;
                                         }
 
-                                    case int cmd when 0xB2 <= cmd && cmd <= 0xB3:
+                                    case 0xB2:  //PWM reg
+                                        {
+                                            var adrs = readByte();
+                                            if (adrs < 0)
+                                                break;
+                                            var dt = readByte();
+                                            if (dt < 0)
+                                                break;
+
+                                            if (comPortPWM != null)
+                                            {
+                                                DeferredWritePWMReg(adrs, (byte)dt);
+                                            }
+                                            break;
+                                        }
+
+                                    case int cmd when 0xB3 <= cmd && cmd <= 0xB3:
                                         {
                                             var adrs = readByte();
                                             if (adrs < 0)
@@ -5744,6 +5805,30 @@ namespace zanac.VGMPlayer
 
         }
 
+        public void DeferredWritePWMReg(int adrs, byte dt)
+        {
+            if (comPortPWM == null)
+                return;
+
+            switch (comPortPWM.SoundModuleType)
+            {
+                case VsifSoundModuleType.Genesis_FTDI:
+
+                    sendPwmData((byte)adrs, dt, (int)Program.Default.BitBangWaitPWM, true);
+                    break;
+            }
+        }
+
+        private void sendPwmData(byte addressAndData, byte data, int f_ftdiClkWidth, bool wait)
+        {
+            comPortPWM.DeferredWriteData(
+                new byte[] { 0, 0 },
+                new byte[] { 6 << 2, 7 << 2 },
+                new byte[] { (byte)addressAndData, (byte)data },
+                f_ftdiClkWidth);
+        }
+
+
         public void DeferredWriteMCDReg(int adrs, byte dt)
         {
             if (comPortMCD == null)
@@ -5776,7 +5861,7 @@ namespace zanac.VGMPlayer
 
         private void sendMcdData(ushort address, byte data, int f_ftdiClkWidth, bool wait)
         {
-            comPortMCD.DeferredWriteData(1, 6 * 4, 0, f_ftdiClkWidth);
+            comPortMCD.DeferredWriteData(1, 6 << 2, 0, f_ftdiClkWidth);
 
             comPortMCD.DeferredWriteData(1, 0, (byte)((address >> 8) & 0xff), f_ftdiClkWidth);
             comPortMCD.DeferredWriteData(1, 0, (byte)(address & 0xff), f_ftdiClkWidth);
@@ -6043,7 +6128,7 @@ namespace zanac.VGMPlayer
                 case VsifSoundModuleType.Genesis:
                 case VsifSoundModuleType.Genesis_Low:
                     if (!secondChip)
-                        comPortDCSG.DeferredWriteData(0, 0x14, (byte)data, (int)Program.Default.BitBangWaitDCSG);
+                        comPortDCSG.DeferredWriteData(0, 5 << 2, (byte)data, (int)Program.Default.BitBangWaitDCSG);
                     break;
                 case VsifSoundModuleType.SMS:
                     if (!secondChip)
@@ -6735,7 +6820,7 @@ namespace zanac.VGMPlayer
             comPortMCD?.FlushDeferredWriteData();
             comPortSAA?.FlushDeferredWriteData();
             comPortPCE?.FlushDeferredWriteData();
-
+            comPortPWM?.FlushDeferredWriteData();
         }
 
         /// <summary>
@@ -6758,6 +6843,7 @@ namespace zanac.VGMPlayer
             comPortMCD?.FlushDeferredWriteDataAndWait();
             comPortSAA?.FlushDeferredWriteDataAndWait();
             comPortPCE?.FlushDeferredWriteDataAndWait();
+            comPortPWM?.FlushDeferredWriteDataAndWait();
         }
 
 
@@ -6782,6 +6868,7 @@ namespace zanac.VGMPlayer
             comPortMCD?.Abort();
             comPortSAA?.Abort();
             comPortPCE?.Abort();
+            comPortPWM?.Abort();
         }
 
         private const int WAIT_TIMEOUT = 120 * 1000;
@@ -6861,6 +6948,8 @@ namespace zanac.VGMPlayer
                 comPortSAA = null;
                 comPortPCE?.Dispose();
                 comPortPCE = null;
+                comPortPWM?.Dispose();
+                comPortPWM = null;
 #if DEBUG
                 if (vgmLogFile != null)
                     writeVgmLogFile(true, 0x66);

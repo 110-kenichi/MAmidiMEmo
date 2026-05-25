@@ -54,6 +54,7 @@ namespace zanac.VGMPlayer
             comboBoxMCD.SelectedIndex = 0;
             comboBoxSAA.SelectedIndex = 0;
             comboBoxPCE.SelectedIndex = 0;
+            comboBoxPWM.SelectedIndex = 0;
 
             listViewList.Columns[0].Width = -2;
             SetHeight(listViewList, SystemInformation.MenuHeight);
@@ -83,6 +84,7 @@ namespace zanac.VGMPlayer
             checkBoxConnMCD.Checked = false;
             checkBoxConnSAA.Checked = false;
             checkBoxConnPCE.Checked = false;
+            checkBoxConnPWM.Checked = false;
 
             //HACK: To avoid layout glith
             tableLayoutPanelPort.Height = tableLayoutPanelPort.Height + 1;
@@ -193,6 +195,7 @@ namespace zanac.VGMPlayer
             comPortMCD?.Dispose();
             comPortSAA?.Dispose();
             comPortPCE?.Dispose();
+            comPortPWM?.Dispose();
 
             StringCollection sc = new StringCollection();
             foreach (ListViewItem item in listViewList.Items)
@@ -1025,6 +1028,35 @@ namespace zanac.VGMPlayer
                         e.Handled = true;
                         break;
                 }
+            }
+        }
+
+        private VsifClient comPortPWM;
+
+        private void checkBoxConnPWM_CheckedChanged(object sender, EventArgs e)
+        {
+            if (checkBoxConnPWM.Checked)
+            {
+                switch (Settings.Default.PWM_IF)
+                {
+                    case 0:
+                        comPortPWM = VsifManager.TryToConnectVSIF(VsifSoundModuleType.Genesis_FTDI,
+                            (PortId)Settings.Default.PWM_Port, (int)Settings.Default.PWM_Div, false);
+                        break;
+                }
+
+                checkBoxConnPWM.Checked = comPortPWM != null;
+                comboBoxPWM.Enabled = comPortPWM == null;
+                comboBoxPortPWM.Enabled = comPortPWM == null;
+                numericUpDownPWMDiv.Enabled = comPortPWM == null;
+            }
+            else
+            {
+                comboBoxPWM.Enabled = true;
+                comboBoxPortPWM.Enabled = true;
+                numericUpDownPWMDiv.Enabled = true;
+
+                comPortPWM?.Dispose();
             }
         }
 

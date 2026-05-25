@@ -1682,7 +1682,7 @@ namespace zanac.VGMPlayer
                     //Genesis
                     comPortOPN2.DeferredWriteDataPrior(
                         new byte[] { 0, 0 },
-                        new byte[] { 0x04, 0x8 },
+                        new byte[] { 1 << 2, 2 << 2 },
                         new byte[] { (byte)0x2a, (byte)dacValue },
                         (int)Program.Default.BitBangWaitOPN2);
                     break;
@@ -1843,7 +1843,7 @@ namespace zanac.VGMPlayer
                     //Genesis
                     comPortOPN2.DeferredWriteData(
                         new byte[] { 0, 0 },
-                        new byte[] { 0x04, 0x8 },
+                        new byte[] { 1 << 2, 2 << 2 },
                         new byte[] { (byte)adrs, (byte)dt },
                         (int)Program.Default.BitBangWaitOPN2);
                     break;
@@ -1926,7 +1926,7 @@ namespace zanac.VGMPlayer
                     //Genesis
                     comPortOPN2.DeferredWriteData(
                         new byte[] { 0, 0 },
-                        new byte[] { 0x0C, 0x10 },
+                        new byte[] { 3 << 2, 4 << 2 },
                         new byte[] { (byte)adrs, (byte)dt },
                         (int)Program.Default.BitBangWaitOPN2);
                     break;
