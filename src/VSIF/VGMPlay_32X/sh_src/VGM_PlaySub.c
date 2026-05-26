@@ -24,25 +24,25 @@ uint32 address_table[16] = {
 		0xFF1000, // PWM Address & Data Hi
 		0xFF1000, // PWM Data Lo
 
+		0xA12010, // COMM CMD ADRS HI(68 -> CD)
+		0xA12011, // COMM CMD ADRS LO(68 -> CD)
+		0xA12012, // COMM CMD DATA (68 -> CD)
 		0xFF1000, // Dummy
-		0xA04000, // YM2612 port 0
-		0xA04001, // YM2612 port 1
-		0xA04002, // YM2612 port 2
-		0xA04003, // YM2612 port 3
-		0xC00011, // PSG
-		0xFF1000, // PWM Address & Data Hi
-		0xFF1000, // PWM Data Lo
+		0xFF1000, // Dummy
+		0xFF1000, // Dummy
+		0xFF1000, // Dummy
+		0xFF1000, // Dummy
 	};
 
 volatile uint8_t g_pwmWriteHead = 0;
 volatile uint8_t g_pwmWriteTail = 0;
-volatile uint8_t g_pwmWriteRegs[256];
-volatile uint16_t g_pwmWriteData[256];
+volatile uint16_t g_pwmWriteEntries[256];
 
 #define PWM_WRITE_HEAD (*(volatile uint8_t *)((uint32_t)&g_pwmWriteHead + MARS_UNCACHED_OFFSET))
 #define PWM_WRITE_TAIL (*(volatile uint8_t *)((uint32_t)&g_pwmWriteTail + MARS_UNCACHED_OFFSET))
-#define PWM_WRITE_REGS ((volatile uint8_t *)((uint32_t)&g_pwmWriteRegs[0] + MARS_UNCACHED_OFFSET))
-#define PWM_WRITE_DATA ((volatile uint16_t *)((uint32_t)&g_pwmWriteData[0] + MARS_UNCACHED_OFFSET))
+#define PWM_WRITE_ENTRIES ((volatile uint16_t *)((uint32_t)&g_pwmWriteEntries[0] + MARS_UNCACHED_OFFSET))
+
+#define PWM_QUEUE_ENTRY(reg, data) (uint16_t)((((uint16_t)(reg)) << 12) | ((uint16_t)(data) & 0x0FFF))
 
 void Mars_Play_Beep_Short(void);
 
@@ -54,8 +54,7 @@ void Mars_Play_Beep_Short(void);
 			if (next == pwmWriteTail) \
 				break; \
 		} \
-		PWM_WRITE_REGS[pwmWriteHead] = pwmReg; \
-		PWM_WRITE_DATA[pwmWriteHead] = (sample); \
+		PWM_WRITE_ENTRIES[pwmWriteHead] = PWM_QUEUE_ENTRY(pwmReg, (sample)); \
 		pwmWriteHead = next; \
 		PWM_WRITE_HEAD = pwmWriteHead; \
 	} while (0)
@@ -68,7 +67,7 @@ void VGMPlay_32X_Sub() {
 	uint16_t pwmHighData = 0;
 	uint8_t pwmWriteHead = PWM_WRITE_HEAD;
 	uint8_t pwmWriteTail = PWM_WRITE_TAIL;
-
+	
 	for(;;)
 	{
 		uint8_t acnt = A_MARS_SYS_COUNTER;
@@ -123,4 +122,5 @@ void VGMPlay_32X_Sub() {
 }
 
 #undef PWM_ENQUEUE
+#undef PWM_QUEUE_ENTRY
 

@@ -46,6 +46,62 @@ McdBiosNotFound:
 
 |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 
+
+.macro  Waits
+    move    #40,%d7
+1:
+    dbf     %d7,1b
+.endm
+
+.macro SETPCM
+    move.b  #0x80,0xFF000F
+
+    move.l  #0xFF2000,%a1              | PCM AREA ADRS
+    move.l  #0xFFE/4,%d0
+SET_PCM:
+    move.w  #0xFDFD,(%a1)+
+    Waits
+    move.w  #0xFDFD,(%a1)+
+    Waits
+    move.w  #0x7F7F,(%a1)+
+    Waits
+    move.w  #0x7F7F,(%a1)+
+    Waits
+    dbf     %d0,SET_PCM
+    move.w  #0xFFFF,(%a1)+
+    Waits
+    move.w  #0xFFFF,(%a1)+
+    Waits
+    move.w  #0xFFFF,(%a1)+
+    Waits
+    move.w  #0xFFFF,(%a1)+
+    Waits
+    .endm
+
+.macro TESTSOUND
+
+    move.b  #0xc0,0xFF000F  | SON ch0
+    Waits
+    move.b  #0x00,0xFF000D  | PCM ADR
+    Waits
+    move.b  #0x00,0xFF000B  | LOOP
+    Waits
+    move.b  #0x00,0xFF0009  | LOOP
+    Waits
+    move.b  #0x08,0xFF0007  | PITCH HI
+    Waits
+    move.b  #0x08,0xFF0005  | PITCH LO
+    Waits
+    move.b  #0xFF,0xFF0003  | PAN
+    Waits
+    move.b  #0xFF,0xFF0001  | VOL
+    Waits
+    move.b  #0xFE,0xFF0011  | KON
+    Waits
+
+||||||||||||||||||||||||
+    .endm
+
 .macro  Vectors
 vector\@:
     dc.l    CD_Init - vector\@ + 4
@@ -129,121 +185,32 @@ loc_292:
     move.b  #0xFF,0xFF0011  | KOFF
 
 CD_Main:
-    move.l  #0xFF800e,%a0              | COMM CMD Address
-    move.l  #0xFF0000,%a4              | PCM AREA ADRS
+    move.l  #0xFF8010,%a0              | COMM CMD Address Offset(2bytes)
+    move.l  #0xFF8012,%a1              | COMM CMD Data
 
-    clr.l   %d0                        | for Recv 
-    move.b  #0xC0,%d1                  | for And Data(Hi 2bit)
-    move.b  #6,%d2                     | for Check Bit 6
-                                       | d4 for PCM ADRS
-    move.w  #2,%d5                     | for PCM burst flag 
-    clr.l   %d4                        | for Recv 
+    move.l  #0xFF0000,%a3              | PCM AREA ADRS
+    move.l  #CD_PCM_LOOP, %a4          | Jmp Address
+
+    move.b  #7,%d2                     | for Check Bit 7 of COMM CMD ADRS Hi to sync with CD
+    move.w  #0x3FFF,%d3                | Mask
 
     move.b  #0x55,0xFF800F             | Set OK
 
 CD_PCM_LOOP:
-CD_PCM_PROC_ADDRESS_HI_HI:
-    btst.b  %d2,(%a0)                         | +8 8    Check CLK
-    beq.b   CD_PCM_PROC_ADDRESS_HI_HI         | +8 16   Wait pullup
-    | 0CAA0000
-    move.b  (%a0),%d4                         | +8 24   
-    | 0CAA0000 -> AA000000
-    lsl.b   #2,%d4                            |+10 34   Shift Left
-CD_PCM_PROC_ADDRESS_HI_LO:
-    btst.b  %d2,(%a0)                         | +8 8    Check CLK
-    bne.b   CD_PCM_PROC_ADDRESS_HI_LO         | +8 16   Wait pulldown
-    | 00AAAAAA | AA000000
-    or.b    (%a0),%d4                         |  8 24   
+    btst.b  %d2,(%a0)                         |+12 12  Check
+    beq.b   CD_PCM_LOOP                       | +8 20   
+    move.w  (%a0),%d0                         | +8 28  Address Offset
+    and.w   %d3,%d0                           | +4 32  Mask
+    move.b  (%a1),(%a3, %d0.w)                |+18 50  Write DATA to register
 
-    | AAAAAAAA -> AAAAAAAA_00000000
-    lsl.w   #8,%d4                            |+22 46   
+CD_PCM_LOOP_2:
+    btst.b  %d2,(%a0)                         |+12 12  Check
+    bne.b   CD_PCM_LOOP_2                     | +8 20   
+    move.w  (%a0),%d0                         | +8 28  Address Offset
+    move.b  (%a1),(%a3, %d0.w)                |+18 46  Write DATA to register
 
-CD_PCM_PROC_ADDRESS_LO_HI:
-    btst.b  %d2,(%a0)                         | +8 8    Check CLK
-    beq.b   CD_PCM_PROC_ADDRESS_LO_HI         | +8 16   Wait pullup
-    | 0CAA0000
-    move.b  (%a0),%d0                         | +8 24   
-    | 0CAA0000 -> AA000000
-    lsl.b   #2,%d0                            |+10 34   Shift Left
-CD_PCM_PROC_ADDRESS_LO_LO:
-    btst.b  %d2,(%a0)                         | +8 8    Check CLK
-    bne.b   CD_PCM_PROC_ADDRESS_LO_LO         | +8 16   Wait pulldown
-    | 00AAAAAA | AA000000
-    or.b    (%a0),%d0                         |  8 24   
-
-    | AAAAAAAA_00000000 | 00000000_AAAAAAAA
-    or.b    %d0,%d4                           | +4 50  PCM Address(Hi+Lo)
-
-CD_PCM_PROC_DATA_HI:
-    btst.b  %d2,(%a0)                         | +8 8    Check CLK
-    beq.b   CD_PCM_PROC_DATA_HI                 | +8 16   Wait pullup
-    | 0CDD0000
-    move.b  (%a0),%d0                         | +8 24
-
-    | 0CDD0000 -> DD000000
-    lsl.b   #2,%d0                            |+10 34   Shift Left
-
-CD_PCM_PROC_DATA_LO:
-    btst.b  %d2,(%a0)                         | +8 8    Check Burst Flag
-    bne.b   CD_PCM_PROC_DATA_LO               | +8 16   Wait pulldown
-    | 00DDDDDD | DD000000
-    or.b    (%a0),%d0                         |  8 24   Get Data(Lo 2bit)
-    | Write Data to Address
-    move.b  %d0,(%a4, %d4.w)                  |+14 38   Write DATA to register
-
-    bra     CD_PCM_LOOP                       |+10 48   Loop
+    jmp     (%a4)                             |+ 8 54   Loop
 CD_PCM_PROC_END:
 
 |||||||||||||||||||||||| Debug
 
-.macro  Waits
-    move    #40,%d7
-1:
-    dbf     %d7,1b
-.endm
-
-.macro TESTSOUND
-    move.b  #0x80,0xFF000F
-
-    move.l  #0xFF2000,%a1              | PCM AREA ADRS
-    move.l  #0xFFE/4,%d0
-SET_PCM:
-    move.w  #0xFDFD,(%a1)+
-    Waits
-    move.w  #0xFDFD,(%a1)+
-    Waits
-    move.w  #0x7F7F,(%a1)+
-    Waits
-    move.w  #0x7F7F,(%a1)+
-    Waits
-    dbf     %d0,SET_PCM
-    move.w  #0xFFFF,(%a1)+
-    Waits
-    move.w  #0xFFFF,(%a1)+
-    Waits
-    move.w  #0xFFFF,(%a1)+
-    Waits
-    move.w  #0xFFFF,(%a1)+
-    Waits
-
-    move.b  #0xc0,0xFF000F  | SON ch0
-    Waits
-    move.b  #0x00,0xFF000D  | PCM ADR
-    Waits
-    move.b  #0x00,0xFF000B  | LOOP
-    Waits
-    move.b  #0x00,0xFF0009  | LOOP
-    Waits
-    move.b  #0x08,0xFF0007  | PITCH HI
-    Waits
-    move.b  #0x08,0xFF0005  | PITCH LO
-    Waits
-    move.b  #0xFF,0xFF0003  | PAN
-    Waits
-    move.b  #0xFF,0xFF0001  | VOL
-    Waits
-    move.b  #0xFE,0xFF0011  | KON
-    Waits
-
-||||||||||||||||||||||||
-    .endm

@@ -6,13 +6,11 @@
 
 extern volatile uint8_t g_pwmWriteHead;
 extern volatile uint8_t g_pwmWriteTail;
-extern volatile uint8_t g_pwmWriteRegs[256];
-extern volatile uint16_t g_pwmWriteData[256];
+extern volatile uint16_t g_pwmWriteEntries[256];
 
 #define PWM_WRITE_HEAD (*(volatile uint8_t *)((uint32_t)&g_pwmWriteHead + MARS_UNCACHED_OFFSET))
 #define PWM_WRITE_TAIL (*(volatile uint8_t *)((uint32_t)&g_pwmWriteTail + MARS_UNCACHED_OFFSET))
-#define PWM_WRITE_REGS ((volatile uint8_t *)((uint32_t)&g_pwmWriteRegs[0] + MARS_UNCACHED_OFFSET))
-#define PWM_WRITE_DATA ((volatile uint16_t *)((uint32_t)&g_pwmWriteData[0] + MARS_UNCACHED_OFFSET))
+#define PWM_WRITE_ENTRIES ((volatile uint16_t *)((uint32_t)&g_pwmWriteEntries[0] + MARS_UNCACHED_OFFSET))
 
 static volatile uint16_t *const pwm_regs[5] = {
 	(volatile uint16_t *)0x20004030,
@@ -85,8 +83,9 @@ void s_main(void) {
 	for(;;) {
         uint8_t pwmHead = PWM_WRITE_HEAD;
 		if (pwmTail != pwmHead) {
-            uint8_t pwmReg = PWM_WRITE_REGS[pwmTail];
-            uint16_t pwmData = PWM_WRITE_DATA[pwmTail];
+            uint16_t pwmEntry = PWM_WRITE_ENTRIES[pwmTail];
+            uint8_t pwmReg = (uint8_t)((pwmEntry >> 12) & 0x07);
+            uint16_t pwmData = pwmEntry & 0x0FFF;
 			pwmTail = (uint8_t)(pwmTail + 1);
             PWM_WRITE_TAIL = pwmTail;
 

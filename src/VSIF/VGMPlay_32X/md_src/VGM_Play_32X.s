@@ -119,6 +119,9 @@ _VGM_DATA_32X_LOOP_B:
     .equ YMPORT3, 0xA04003 |; YM2612 port 3
     .equ PSGPORT, 0xC00011 |; PSG port
     .equ DUMMY,   0xFF1000 |; dummy memory
+    .equ COMM_CMD_ADRS_HI, 0xA12010 |; COMM CMD ADRS HI(68 -> CD)
+    .equ COMM_CMD_ADRS_LO, 0xA12011 |; COMM CMD ADRS LO(68 -> CD)
+    .equ COMM_CMD_DATA,    0xA12012 |; COMM CMD DATA (68 -> CD)
 
 | ADRESS_TABLE:
 |     dc.l DUMMY   		|;00
