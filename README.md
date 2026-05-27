@@ -263,8 +263,8 @@ e.g.) YM2151 has 8ch FM sounds, so you can play 8 chords on MIDI 1ch or sharing 
    2. You need to ★save the data ★manually on the DAW (Cubase and so on). Or, keep open the dummy editor window of the MAmidiMemo.
    3. Allow ★firewall communication to MAmidiMEmo and your DAW.
    4. MT-32 & CM32-P can not store/restore last settings.
-   5. HuC6820 suddenly stop sounding. Please restart MAmi.
-   6. MAmidiMEmo process stuck after sound interface changed if you used SCCI interface.
+   5. MAmidiMEmo process stuck after sound interface changed if you used SCCI interface.
+   6. VSIF SEGA 32X reset button does not work. Please re-power on the SEGA 32X.
    
 *** How to create build environment ***
 
@@ -280,7 +280,8 @@ e.g.) YM2151 has 8ch FM sounds, so you can play 8 chords on MIDI 1ch or sharing 
 *** Changes
 - 6.5.0.0 Supported "PWM(SEGA 32X)" for VGMPlayer.
 		  Improved RF5C68 performance for VGMPlayer and MAmidiMEmo.
-		  NOTE: Be sure to update mega drive/genesis firmware VGMPlay_32X.32x, VGMPlay_mdcd.bin VGMPlay_md.bin
+		  NOTE 1: Be sure to update mega drive/genesis firmware VGMPlay_32X.32x, VGMPlay_mdcd.bin VGMPlay_md.bin
+		  NOTE 2: VSIF SEGA 32X reset button does not work. Please re-power on the SEGA 32X.
 - 6.4.3.3 Fixed SCC volume and pitch issue.
 - 6.4.3.2 Fixed old YM2610B ADPCM settings loading issue.
   - Fixed YM2610B Key on/off issue.
