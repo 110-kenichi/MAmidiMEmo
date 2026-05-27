@@ -461,7 +461,7 @@ namespace zanac.VGMPlayer
             //MCD RF5C164
             if (comPortMCD != null)
             {
-                DeferredWriteMCDReg(8, (byte)0xff);
+                DeferredWriteMCDReg(0x08, 0xFF); // koff all
             }
             //SAA1099
             if (comPortSAA != null)
@@ -1290,9 +1290,31 @@ namespace zanac.VGMPlayer
                 {
                     Accepted = true;
 
+                    //HACK: sync clk
+                    DeferredWriteMCDReg(8, (byte)0xff); // dummy key off
+                    DeferredWriteMCDReg(8, (byte)0xff); // dummy key off
+
+                    //debug
+                    //DeferredWriteMCDReg(0x0F, 0xc0); // SON ch
+                    //DeferredWriteMCDReg(0x0D, 0x00); // PCM ADR
+                    //DeferredWriteMCDReg(0x0B, 0x00); // LOOP
+                    //DeferredWriteMCDReg(0x09, 0x00); // LOOP
+                    //DeferredWriteMCDReg(0x07, 0x08); // pitch hi
+                    //DeferredWriteMCDReg(0x05, 0x08); // pitch lo
+                    //DeferredWriteMCDReg(0x03, 0xff); // pan
+                    //DeferredWriteMCDReg(0x01, 0xff); // vol
+                    //DeferredWriteMCDReg(0x01, 0xFF); // vol
+
+                    //DeferredWriteMCDReg(0x08, 0xfe); // kon ch0
+                    //DeferredWriteMCDReg(0x08, 0xfe); // kon ch0
+
+                    //DeferredWriteMCDReg(0x08, 0xff); // kon ch0
+                    //DeferredWriteMCDReg(0x08, 0xff); // kon ch0
+
                     return true;
                 }
             }
+
             return false;
         }
 
@@ -4159,7 +4181,7 @@ namespace zanac.VGMPlayer
                                                                 int lastPercentage = -1;
                                                                 for (var i = saddr; i < dd.Count; i++)
                                                                 {
-                                                                    if (i < 0x20)
+                                                                    if (i <= 8)
                                                                     {
                                                                         DeferredWriteMCDReg((int)(i & 0x1f), dd[(int)i]);
                                                                     }
@@ -4195,6 +4217,7 @@ namespace zanac.VGMPlayer
                                                                         comPortMCD?.FlushDeferredWriteDataAndWait();
                                                                         break;
                                                                 }
+                                                                DeferredWriteMCDReg(0x08, 0xFF); //HACK: koff all
                                                                 FormMain.TopForm.SetStatusText("RF5C164: Transferred PCM.");
                                                             }
                                                         }
@@ -4457,6 +4480,7 @@ namespace zanac.VGMPlayer
                                                                         comPortMCD?.FlushDeferredWriteDataAndWait();
                                                                         break;
                                                                 }
+                                                                DeferredWriteMCDReg(0x08, 0xFF); //HACK: koff all
                                                                 FormMain.TopForm.SetStatusText("RF5C164: Transferred PCM.");
                                                             }
 
@@ -4817,7 +4841,7 @@ namespace zanac.VGMPlayer
                                             if (command == 0xB0)
                                                 dclk = vgmHead.cur.lngHzRF5C68;
 
-                                            if (comPortMCD != null)
+                                            if (comPortMCD != null && adrs <= 8)
                                             {
                                                 int ch = comPortMCD.RegTable[7] << 8;
 
@@ -5162,7 +5186,7 @@ namespace zanac.VGMPlayer
                                                 switch (comPortMCD.SoundModuleType)
                                                 {
                                                     case VsifSoundModuleType.Genesis_FTDI:
-                                                        comPortMCD?.FlushDeferredWriteDataAndWait();
+                                                        //comPortMCD?.FlushDeferredWriteDataAndWait();
                                                         break;
                                                 }
                                             }
@@ -5833,14 +5857,15 @@ namespace zanac.VGMPlayer
         {
             if (comPortMCD == null)
                 return;
-
-            switch (comPortMCD.SoundModuleType)
+            if (0 <= adrs && adrs <= 8)
             {
-                case VsifSoundModuleType.Genesis_FTDI:
-
-                    adrs = ((adrs << 1) + 1);
-                    sendMcdData((ushort)adrs, dt, (int)Program.Default.BitBangWaitMCD, true);
-                    break;
+                switch (comPortMCD.SoundModuleType)
+                {
+                    case VsifSoundModuleType.Genesis_FTDI:
+                        adrs = ((adrs << 1) + 1);
+                        sendMcdData((ushort)adrs, dt, (int)Program.Default.BitBangWaitMCD, true);
+                        break;
+                }
             }
         }
 
@@ -5859,22 +5884,21 @@ namespace zanac.VGMPlayer
             }
         }
 
+        private byte mcdClk = 0x80;
+
         private void sendMcdData(ushort address, byte data, int f_ftdiClkWidth, bool wait)
         {
-            comPortMCD.DeferredWriteData(1, 6 << 2, 0, f_ftdiClkWidth);
+            comPortMCD.DeferredWriteData(0, 10 << 2, data, f_ftdiClkWidth);
+            comPortMCD.DeferredWriteData(0, 9 << 2, (byte)(address & 0xff), f_ftdiClkWidth);
+            comPortMCD.DeferredWriteData(0, 8 << 2, (byte)(((address >> 8) & 0x3f) | mcdClk), f_ftdiClkWidth);
 
-            comPortMCD.DeferredWriteData(1, 0, (byte)((address >> 8) & 0xff), f_ftdiClkWidth);
-            comPortMCD.DeferredWriteData(1, 0, (byte)(address & 0xff), f_ftdiClkWidth);
-            comPortMCD.DeferredWriteData(1, 0, data, f_ftdiClkWidth);
+            mcdClk ^= 0x80;
+
             if (wait)
             {
-                /* Does not need ???
                 comPortMCD.DeferredWriteData(0xff, 0, 0, f_ftdiClkWidth);
                 comPortMCD.DeferredWriteData(0xff, 0, 0, f_ftdiClkWidth);
                 comPortMCD.DeferredWriteData(0xff, 0, 0, f_ftdiClkWidth);
-                comPortMCD.DeferredWriteData(0xff, 0, 0, f_ftdiClkWidth);
-                comPortMCD.DeferredWriteData(0xff, 0, 0, f_ftdiClkWidth);
-                */
             }
         }
 

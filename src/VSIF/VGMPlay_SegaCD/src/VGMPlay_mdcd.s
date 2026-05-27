@@ -36,52 +36,19 @@ _VGM_ADDRESS_FTDI2XX_LOOP:
     move.b  (%a0),%d0                         | +8 24   Get Address Idx(Lo 4bit) and Data(Hi 2bit)
     | Get Write Address
     | 0CDDAAAA -> DDAAAA00
-    add.b   %d0,%d0                           | +4 28   Shift Left
-    add.b   %d0,%d0                           | +4 32   Shift Left
-    move.l  (%d0.w, %a1), %a2                 |+16 48   Get Register Address
+    lsl.b   #2,%d0                            |+10 34   Shift Left
+    move.l  (%d0, %a1), %a2                   |+16 50   Get Register Address
 
 _VGM_DATA_FTDI2XX_LOOP:
     btst.b  %d2,(%a0)                         | +8 8    Check CLK
     bne.b   _VGM_DATA_FTDI2XX_LOOP            | +8 16   Wait pulldown
-    and.b   %d1,%d0                           | +4 20   DDAAAA00 -> DD000000
+    and.b   %d1,%d0                           |+ 4 20   
     or.b    (%a0),%d0                         |  8 28   Get Data(Hi 2bit | Lo 6bit)
     | Write Data to Address
     move.b  %d0,(%a2)                         |+ 8 36   Write DATA to register
 
-    cmpa.l  %d6,%a2                           |  6 42         
-    bne     _VGM_ADDRESS_FTDI2XX              | 10/8    jump/not jump
+    jmp     (%a3)                             |+ 8 44   Loop
 
-||||||||||||||||||||||||||||
-
-_PCM_PROC_ADDRESS_HI_LO:
-    btst.b  %d2,(%a0)                         | +8 8    Check CLK
-    beq.b   _PCM_PROC_ADDRESS_HI_LO           | +8 16   Wait pullup
-    move.b  (%a0),(%a5)                       |+12 28
-_PCM_PROC_ADDRESS_HI_HI:
-    btst.b  %d2,(%a0)                         | +8 8    Check CLK
-    bne.b   _PCM_PROC_ADDRESS_HI_HI           | +8 16   Wait pulldown
-    move.b  (%a0),(%a5)                       |+12 28
-
-_PCM_PROC_ADDRESS_LO_LO:
-    btst.b  %d2,(%a0)                         | +8 8    Check CLK
-    beq.b   _PCM_PROC_ADDRESS_LO_LO           | +8 16   Wait pullup
-    move.b  (%a0),(%a5)                       |+12 28
-_PCM_PROC_ADDRESS_LO_HI:
-    btst.b  %d2,(%a0)                         | +8 8    Check CLK
-    bne.b   _PCM_PROC_ADDRESS_LO_HI           | +8 16   Wait pulldown
-    move.b  (%a0),(%a5)                       |+12 28
-
-_PCM_PROC_DATA_HI:
-    btst.b  %d2,(%a0)                         | +8 8    Check CLK
-    beq.b   _PCM_PROC_DATA_HI                 | +8 16   Wait pullup
-    move.b  (%a0),%d0                         |
-    move.b  %d0,(%a5)                         |
-_PCM_PROC_DATA_LO:
-    btst.b  %d2,(%a0)                         | +8 8    Check Burst Flag
-    bne.b   _PCM_PROC_DATA_LO                 | +8 16   Wait pulldown
-    move.b  (%a0),(%a5)                       |+12 28
-
-    jmp     (%a3)                             |+ 8 52   Loop
 
 |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 
@@ -90,20 +57,31 @@ _PCM_PROC_DATA_LO:
     .equ YMPORT2, 0xA04002 |; YM2612 port 2
     .equ YMPORT3, 0xA04003 |; YM2612 port 3
     .equ PSGPORT, 0xC00011 |; PSG port
-    .equ DUMMY,   0xA00000 |; dummy memory
-    .equ PCMKEY,  0xA00001 |; PCM MAGIC WORD(dummy memory)
+    .equ CD_ADDR_HI,   0xA12010 |; COMM CMD Address Hi
+    .equ CD_ADDR_LO,   0xA12011 |; COMM CMD Address Lo
+    .equ CD_DATA,   0xA12012 |; COMM CMD DATA
+    .equ DUMMY,   0xFF1000 |; dummy memory
 
 ADRESS_TABLE:
-    .rept 8
+    .rept 4
     dc.l DUMMY   		|;00
     dc.l YMPORT0 		|;04
     dc.l YMPORT1 		|;08
     dc.l YMPORT2 		|;0C
     dc.l YMPORT3 		|;10
     dc.l PSGPORT 		|;14
-    dc.l PCMKEY 		|;18
-    dc.l DUMMY 		    |;1c
-    .endr
+    dc.l DUMMY 		    |;18
+    dc.l DUMMY 		    |;1C
 
+    dc.l CD_ADDR_HI	    |;20
+    dc.l CD_ADDR_LO	    |;24
+    dc.l CD_DATA	    |;28
+    dc.l DUMMY 		    |
+    dc.l DUMMY 		    |
+    dc.l DUMMY 		    |
+    dc.l DUMMY 		    |
+    dc.l DUMMY 		    |
+    .endr
+    
 |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 

@@ -28,6 +28,7 @@
 
 	.global	InitSubCPU
 	.global	FindMCDBIOS
+	.global	CheckMCDHardware
 	.global	SendMCDInt2
 	.global	CopyNewUserSP
 	.global	ResetSubCPU
@@ -246,6 +247,44 @@ End:
 
 SendMCDInt2:
 	bset	#0,0xA12000			| Send interrupt request
+	rts
+
+| -------------------------------------------------------------------------
+| Check if Mega-CD gate array and Sub CPU control registers respond
+| -------------------------------------------------------------------------
+| RETURNS:
+| 	cc/cs - Present, not present
+| -------------------------------------------------------------------------
+
+CheckMCDHardware:
+	move.b	0xA12001,%d0			| Save Sub CPU control register
+	move.b	0xA12002,%d1			| Save write protect register
+
+	move.b	%d1,%d2
+	eori.b	#0x2A,%d2			| Probe a writable gate array register
+	move.b	%d2,0xA12002
+	cmp.b	0xA12002,%d2
+	bne.s	CheckMCDHardwareFail
+	move.b	%d1,0xA12002
+
+	bsr.w	ReqSubCPUBus
+	tst.b	%d2
+	bne.s	CheckMCDHardwareFailRestore
+	bsr.w	ReturnSubCPUBus
+	tst.b	%d2
+	bne.s	CheckMCDHardwareFailRestore
+
+	move.b	%d0,0xA12001
+	move.b	%d1,0xA12002
+	andi	#0xFE,%ccr
+	rts
+
+CheckMCDHardwareFailRestore:
+	move.b	%d0,0xA12001
+	move.b	%d1,0xA12002
+
+CheckMCDHardwareFail:
+	ori	#1,%ccr
 	rts
 
 | -------------------------------------------------------------------------

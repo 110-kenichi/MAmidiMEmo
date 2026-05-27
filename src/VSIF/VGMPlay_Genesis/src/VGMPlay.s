@@ -348,71 +348,25 @@ _VGM_DATA_FTDI2XX_LOOP:
     .equ YMPORT2, 0xA04002 |; YM2612 port 2
     .equ YMPORT3, 0xA04003 |; YM2612 port 3
     .equ PSGPORT, 0xC00011 |; PSG port
-    .equ DUMMY,   0xA10006 |; dummy
+    .equ DUMMY,   0xFF1000 |; dummy memory
 
-
-ADRESS_TABLE:	
+ADRESS_TABLE:
+    .rept 4
     dc.l DUMMY   		|;00
     dc.l YMPORT0 		|;04
     dc.l YMPORT1 		|;08
     dc.l YMPORT2 		|;0C
     dc.l YMPORT3 		|;10
     dc.l PSGPORT 		|;14
-    dc.l PSGPORT 		|;18
-    dc.l PSGPORT 		|;1c
-    dc.l DUMMY   		|;20
-    dc.l YMPORT0 		|;04
-    dc.l YMPORT1 		|;08
-    dc.l YMPORT2 		|;0C
-    dc.l YMPORT3 		|;10
-    dc.l PSGPORT 		|;14
-    dc.l PSGPORT 		|;18
-    dc.l PSGPORT 		|;1c
-    dc.l DUMMY   		|;40
-    dc.l YMPORT0 		|;04
-    dc.l YMPORT1 		|;08
-    dc.l YMPORT2 		|;0C
-    dc.l YMPORT3 		|;10
-    dc.l PSGPORT 		|;14
-    dc.l PSGPORT 		|;18
-    dc.l PSGPORT 		|;1c
-    dc.l DUMMY   		|;60
-    dc.l YMPORT0 		|;04
-    dc.l YMPORT1 		|;08
-    dc.l YMPORT2 		|;0C
-    dc.l YMPORT3 		|;10
-    dc.l PSGPORT 		|;14
-    dc.l PSGPORT 		|;18
-    dc.l PSGPORT 		|;1c
-    dc.l DUMMY   		|;80
-    dc.l YMPORT0 		|;04
-    dc.l YMPORT1 		|;08
-    dc.l YMPORT2 		|;0C
-    dc.l YMPORT3 		|;10
-    dc.l PSGPORT 		|;14
-    dc.l PSGPORT 		|;18
-    dc.l PSGPORT 		|;1c
-    dc.l DUMMY   		|;a0
-    dc.l YMPORT0 		|;04
-    dc.l YMPORT1 		|;08
-    dc.l YMPORT2 		|;0C
-    dc.l YMPORT3 		|;10
-    dc.l PSGPORT 		|;14
-    dc.l PSGPORT 		|;18
-    dc.l PSGPORT 		|;1c
-    dc.l DUMMY   		|;c0
-    dc.l YMPORT0 		|;04
-    dc.l YMPORT1 		|;08
-    dc.l YMPORT2 		|;0C
-    dc.l YMPORT3 		|;10
-    dc.l PSGPORT 		|;14
-    dc.l PSGPORT 		|;18
-    dc.l PSGPORT 		|;1c
-    dc.l DUMMY   		|;e0
-    dc.l YMPORT0 		|;04
-    dc.l YMPORT1 		|;08
-    dc.l YMPORT2 		|;0C
-    dc.l YMPORT3 		|;10
-    dc.l PSGPORT 		|;14
-    dc.l PSGPORT 		|;18
-    dc.l PSGPORT 		|;1c
+    dc.l DUMMY 		    |;18
+    dc.l DUMMY 		    |;1C
+
+    dc.l DUMMY 		    |
+    dc.l DUMMY 		    |
+    dc.l DUMMY 		    |
+    dc.l DUMMY 		    |
+    dc.l DUMMY 		    |
+    dc.l DUMMY 		    |
+    dc.l DUMMY 		    |
+    dc.l DUMMY 		    |
+    .endr

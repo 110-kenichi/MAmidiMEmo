@@ -172,6 +172,10 @@ namespace zanac.MAmidiMEmo.Instruments.Chips
                                     FtdiClkWidth = 8;
                             }
 
+                            //HACK: sync clk
+                            RF5C164RegWriteData(UnitNumber, 8, (byte)0xff, false); // dummy key off
+                            RF5C164RegWriteData(UnitNumber, 8, (byte)0xff, false); // dummy key off
+
                             f_CurrentSoundEngineType = f_SoundEngineType;
                             SetDevicePassThru(true);
                         }
@@ -378,7 +382,6 @@ namespace zanac.MAmidiMEmo.Instruments.Chips
                     {
                         case SoundEngineType.VSIF_Genesis_FTDI:
                             ushort adrs = (ushort)((reg << 1) + 1);
-
                             sendData(adrs, data, true);
                             break;
                     }
@@ -407,8 +410,8 @@ namespace zanac.MAmidiMEmo.Instruments.Chips
                 switch (CurrentSoundEngine)
                 {
                     case SoundEngineType.VSIF_Genesis_FTDI:
-                        ushort adrs = (ushort)((0x2000 + (address << 1)) + 1);
 
+                        ushort adrs = (ushort)((0x2000 + (address << 1)) + 1);
                         sendData(adrs, data, false);
                         break;
                 }
@@ -425,19 +428,19 @@ namespace zanac.MAmidiMEmo.Instruments.Chips
             }
         }
 
+        private byte mcdClk = 0x80;
 
         private void sendData(ushort address, byte data, bool wait)
         {
             List<PortWriteData> list = new List<PortWriteData>();
-            list.Add(new PortWriteData() { Type = 1, Address = 6*4, Data = 0, Wait = f_ftdiClkWidth });
+            list.Add(new PortWriteData() { Type = 0, Address = 10 << 2, Data = data, Wait = f_ftdiClkWidth });
+            list.Add(new PortWriteData() { Type = 0, Address = 9 << 2, Data = (byte)(address & 0xff), Wait = f_ftdiClkWidth });
+            list.Add(new PortWriteData() { Type = 0, Address = 8 << 2, Data = (byte)(((address >> 8) & 0x3f) | mcdClk), Wait = f_ftdiClkWidth });
 
-            list.Add(new PortWriteData() { Type = 1, Address = 0, Data = (byte)((address >> 8) & 0xff), Wait = f_ftdiClkWidth });
-            list.Add(new PortWriteData() { Type = 1, Address = 0, Data = (byte)(address & 0xff), Wait = f_ftdiClkWidth });
-            list.Add(new PortWriteData() { Type = 1, Address = 0, Data = data, Wait = f_ftdiClkWidth });
+            mcdClk ^= 0x80;
+
             if (wait)
             {
-                list.Add(new PortWriteData() { Type = 0xff, Address = 0, Data = 0, Wait = f_ftdiClkWidth });
-                list.Add(new PortWriteData() { Type = 0xff, Address = 0, Data = 0, Wait = f_ftdiClkWidth });
                 list.Add(new PortWriteData() { Type = 0xff, Address = 0, Data = 0, Wait = f_ftdiClkWidth });
                 list.Add(new PortWriteData() { Type = 0xff, Address = 0, Data = 0, Wait = f_ftdiClkWidth });
                 list.Add(new PortWriteData() { Type = 0xff, Address = 0, Data = 0, Wait = f_ftdiClkWidth });
@@ -632,14 +635,20 @@ namespace zanac.MAmidiMEmo.Instruments.Chips
 
             if (pcmData.Count != 0)
             {
-                FormMain.OutputLog(this, Resources.UpdatingADPCM + " (" + timbre.DisplayName + ")");
+                string timbreName = null;
+                if(timbre != null)
+                    timbreName = timbre.DisplayName;
+                else
+                    timbreName = "All";
+
+                FormMain.OutputLog(this, Resources.UpdatingADPCM + " (" + timbreName + ")");
                 try
                 {
                     FormMain.AppliactionForm.Enabled = false;
                     using (FormProgress f = new FormProgress())
                     {
                         f.StartPosition = FormStartPosition.CenterScreen;
-                        f.Message = Resources.UpdatingADPCM + " (" + timbre.DisplayName + ")";
+                        f.Message = Resources.UpdatingADPCM + " (" + timbreName + ")";
                         f.Show();
                         //transferPcmOnlyDiffData(pcmData.ToArray(), f);
                         sendPcmData(pcmData.ToArray(), 0, f);

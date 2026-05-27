@@ -1368,7 +1368,7 @@ namespace zanac.VGMPlayer.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("9")]
+        [global::System.Configuration.DefaultSettingValueAttribute("0")]
         public decimal BitBangWaitPWM {
             get {
                 return ((decimal)(this["BitBangWaitPWM"]));

@@ -347,17 +347,31 @@ _VGM_DATA_FTDI2XX_LOOP:
     .equ YMPORT2, 0xA04002 |; YM2612 port 2
     .equ YMPORT3, 0xA04003 |; YM2612 port 3
     .equ PSGPORT, 0xC00011 |; PSG port
-    .equ DUMMY,   0xA00000 |; dummy memory
-    .equ PCMKEY,  0xA00001 |; PCM MAGIC WORD(dummy memory)
+    .equ CD_ADDR_HI,   0xA12010 |; COMM CMD Address Hi
+    .equ CD_ADDR_LO,   0xA12011 |; COMM CMD Address Lo
+    .equ CD_DATA,   0xA12012 |; COMM CMD DATA
+    .equ DUMMY,   0xFF1000 |; dummy memory
 
 ADRESS_TABLE:
-    .rept 8
+    .rept 4
     dc.l DUMMY   		|;00
     dc.l YMPORT0 		|;04
     dc.l YMPORT1 		|;08
     dc.l YMPORT2 		|;0C
     dc.l YMPORT3 		|;10
     dc.l PSGPORT 		|;14
-    dc.l DUMMY 		    |;1c
-    dc.l DUMMY 		    |;1c
+    dc.l DUMMY 		    |;18
+    dc.l DUMMY 		    |;1C
+
+    dc.l DUMMY 		    |
+    dc.l DUMMY 		    |
+    dc.l DUMMY 		    |
+    dc.l DUMMY 		    |
+    dc.l DUMMY 		    |
+    dc.l DUMMY 		    |
+    dc.l DUMMY 		    |
+    dc.l DUMMY 		    |
     .endr
+
+|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+

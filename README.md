@@ -1,4 +1,4 @@
-MAmidiMEmo 6.4.3.3 Itoken (c)2019, 2026 / GPL-2.0
+MAmidiMEmo 6.5.0.0 Itoken (c)2019, 2026 / GPL-2.0
 
 *** What is the MAmidiMEmo? ***
 
@@ -278,6 +278,9 @@ e.g.) YM2151 has 8ch FM sounds, so you can play 8 chords on MIDI 1ch or sharing 
    [![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=SNQ9JE3JAQMNQ)
 
 *** Changes
+- 6.5.0.0 Supported "PWM(SEGA 32X)" for VGMPlayer.
+		  Improved RF5C68 performance for VGMPlayer and MAmidiMEmo.
+		  NOTE: Be sure to update mega drive/genesis firmware VGMPlay_32X.32x, VGMPlay_mdcd.bin VGMPlay_md.bin
 - 6.4.3.3 Fixed SCC volume and pitch issue.
 - 6.4.3.2 Fixed old YM2610B ADPCM settings loading issue.
   - Fixed YM2610B Key on/off issue.

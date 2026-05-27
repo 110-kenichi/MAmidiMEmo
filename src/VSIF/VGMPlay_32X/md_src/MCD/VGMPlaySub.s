@@ -76,6 +76,29 @@ SET_PCM:
     Waits
     move.w  #0xFFFF,(%a1)+
     Waits
+
+    move.b  #0x40,0xFF000F  | SOF ch0
+    move.b  #0x00,0xFF0001  | VOL 0
+    move.b  #0x41,0xFF000F  | SOF ch1
+    move.b  #0x00,0xFF0001  | VOL 0
+    move.b  #0x42,0xFF000F  | SOF ch2
+    move.b  #0x00,0xFF0001  | VOL 0
+    move.b  #0x43,0xFF000F  | SOF ch3
+    move.b  #0x00,0xFF0001  | VOL 0
+    move.b  #0x44,0xFF000F  | SOF ch4
+    move.b  #0x00,0xFF0001  | VOL 0
+    move.b  #0x45,0xFF000F  | SOF ch5
+    move.b  #0x00,0xFF0001  | VOL 0
+    move.b  #0x46,0xFF000F  | SOF ch6
+    move.b  #0x00,0xFF0001  | VOL 0
+    move.b  #0x47,0xFF000F  | SOF ch7
+    move.b  #0x00,0xFF0001  | VOL 0
+    move.b  #0x48,0xFF000F  | SOF ch8
+    move.b  #0x00,0xFF0001  | VOL 0
+
+    move.b  #0xFF,0xFF0011  | KOFF ALL
+
+    move.b  #0x80,0xFF000F  | SON ch0 
     .endm
 
 .macro TESTSOUND
@@ -181,20 +204,32 @@ loc_292:
 	| Mute CD audio
 	move.w #0, (GA_CDD_FADER).w
 
-|    TESTSOUND
-    move.b  #0xFF,0xFF0011  | KOFF
+    move.b  #0xFF,0xFF0011  | KOFF ALL
+    move.b  #0xC0,0xFF000F  | SON ch0
 
 CD_Main:
     move.l  #0xFF8010,%a0              | COMM CMD Address Offset(2bytes)
     move.l  #0xFF8012,%a1              | COMM CMD Data
 
     move.l  #0xFF0000,%a3              | PCM AREA ADRS
-    move.l  #CD_PCM_LOOP, %a4          | Jmp Address
+    |   move.l  #CD_PCM_LOOP, %a4          | Jmp Address ★★★★Can not use absolute address★★★★★
 
     move.b  #7,%d2                     | for Check Bit 7 of COMM CMD ADRS Hi to sync with CD
     move.w  #0x3FFF,%d3                | Mask
 
     move.b  #0x55,0xFF800F             | Set OK
+
+|SETPCM
+|move.b  #0xc0,0xFF000F  | SON ch0
+|move.b  #0x00,0xFF000D  | PCM ADR
+|move.b  #0x00,0xFF000B  | LOOP
+|move.b  #0x00,0xFF0009  | LOOP
+|move.b  #0x08,0xFF0007  | PITCH HI
+|move.b  #0x08,0xFF0005  | PITCH LO
+|move.b  #0xFF,0xFF0003  | PAN
+|move.b  #0xFF,0xFF0001  | VOL ff
+||move.b  #0x00,0xFF0001  | VOL 00
+||move.b  #0xFE,0xFF0011  | KON ch0
 
 CD_PCM_LOOP:
     btst.b  %d2,(%a0)                         |+12 12  Check
@@ -208,9 +243,7 @@ CD_PCM_LOOP_2:
     bne.b   CD_PCM_LOOP_2                     | +8 20   
     move.w  (%a0),%d0                         | +8 28  Address Offset
     move.b  (%a1),(%a3, %d0.w)                |+18 46  Write DATA to register
-
-    jmp     (%a4)                             |+ 8 54   Loop
+    bra.s   CD_PCM_LOOP                       |+10 56  
 CD_PCM_PROC_END:
 
 |||||||||||||||||||||||| Debug
-

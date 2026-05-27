@@ -223,11 +223,13 @@ namespace zanac.VGMPlayer
                                     ftdi.SetLatency(0);
 
                                     var client = new VsifClient(soundModule, new PortWriterGenesis(ftdi, comPort));
-
-                                    client.WriteData(0, 0x14, (byte)(0x80 | 0 << 5 | 0x1f), 100);
-                                    client.WriteData(0, 0x14, (byte)(0x80 | 1 << 5 | 0x1f), 100);
-                                    client.WriteData(0, 0x14, (byte)(0x80 | 2 << 5 | 0x1f), 100);
-                                    client.WriteData(0, 0x14, (byte)(0x80 | 3 << 5 | 0x1f), 100);
+                                    for (int i = 0; i < 2; i++)
+                                    {
+                                        client.DeferredWriteData(0, 0x14, (byte)(0x80 | 0x1f), (int)Program.Default.BitBangWaitDCSG);
+                                        client.DeferredWriteData(0, 0x14, (byte)(0x80 | 0x3f), (int)Program.Default.BitBangWaitDCSG);
+                                        client.DeferredWriteData(0, 0x14, (byte)(0x80 | 0x5f), (int)Program.Default.BitBangWaitDCSG);
+                                        client.DeferredWriteData(0, 0x14, (byte)(0x80 | 0x7f), (int)Program.Default.BitBangWaitDCSG);
+                                    }
 
                                     client.Disposed += Client_Disposed;
                                     vsifClients.Add(client);

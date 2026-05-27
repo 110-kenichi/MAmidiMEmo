@@ -814,6 +814,10 @@
       <Link>Tools\Praat2Lpc\README.md</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <Content Include="..\VSIF\VGMPlay_32X\VGMPlay_32X.32x">
+      <Link>VSIF\VGMPlay_32X.32x</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <None Include="..\VSIF\VGMPlay_C64\VSIF_C64.prg">
       <Link>VSIF\VSIF_C64.prg</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
