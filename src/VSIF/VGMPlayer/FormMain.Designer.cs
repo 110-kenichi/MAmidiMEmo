@@ -6515,7 +6515,7 @@ namespace zanac.VGMPlayer
             this.label24.Name = "label24";
             this.label24.Size = new System.Drawing.Size(114, 20);
             this.label24.TabIndex = 67;
-            this.label24.Text = "P&WM(32X)";
+            this.label24.Text = "P&WM(SUPER 32X)";
             this.label24.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             this.label24.Click += new System.EventHandler(this.label3_Click);
             this.label24.DoubleClick += new System.EventHandler(this.label3_DoubleClick);
@@ -6901,7 +6901,7 @@ namespace zanac.VGMPlayer
             this.KeyPreview = true;
             this.MainMenuStrip = this.menuStrip1;
             this.Name = "FormMain";
-            this.Text = "Real chip VGM/XGM/MGS player V2.10 by Itoken";
+            this.Text = "Real chip VGM/XGM/MGS player V2.11 by Itoken";
             this.KeyDown += new System.Windows.Forms.KeyEventHandler(this.FormMain_KeyDown);
             this.menuStrip1.ResumeLayout(false);
             this.menuStrip1.PerformLayout();

@@ -278,7 +278,9 @@ e.g.) YM2151 has 8ch FM sounds, so you can play 8 chords on MIDI 1ch or sharing 
    [![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=SNQ9JE3JAQMNQ)
 
 *** Changes
-- 6.5.0.0 Supported "PWM(SEGA 32X)" for VGMPlayer.
+- 6.5.1.0 Supported PWM DAC stream by VGMPlayer.
+		  Supported corrupted 32X VGM file by VGMPlayer.
+- 6.5.0.0 Supported "PWM(SEGA 32X)" for .
 		  Improved RF5C68 performance for VGMPlayer and MAmidiMEmo.
 		  NOTE 1: Be sure to update mega drive/genesis firmware VGMPlay_32X.32x, VGMPlay_mdcd.bin VGMPlay_md.bin
 		  NOTE 2: VSIF SEGA 32X reset button does not work. Please re-power on the SEGA 32X.

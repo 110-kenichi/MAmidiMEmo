@@ -28,7 +28,8 @@ namespace zanac.VGMPlayer
             OPN2,
             TurboR,
             NES,
-            PCE
+            PCE,
+            PWM
         }
 
         private DacProxyType dacProxyType;
@@ -174,6 +175,15 @@ namespace zanac.VGMPlayer
                                 break;
                         }
                         sampleRate = pd.CurrentStreamData.Frequency;
+                        break;
+                    case 17:    //PWM
+                        {
+                            byte dataHi = pd.DacData[pd.StreamIdx];
+                            pd.StreamIdx += pd.StreamIdxDir;
+
+                            ((VGMSong)parentSong).DeferredWritePWMReg(0x40 + (dataHi & 0xf), data);
+                            sampleRate = pd.CurrentStreamData.Frequency;
+                        }
                         break;
                     case 20:    //NES
                         ((VGMSong)parentSong).DeferredWriteNES(0x11, data);

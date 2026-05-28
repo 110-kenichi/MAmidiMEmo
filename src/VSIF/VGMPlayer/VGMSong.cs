@@ -70,6 +70,11 @@ namespace zanac.VGMPlayer
 
         private int dacOffset = 0;
 
+        // Decompression tables for data block type 0x7F
+        // Key: (compressionType tt, subType st), Value: (bitsDecompressed bd, bitsCompressed bc, table values)
+        private Dictionary<(byte tt, byte st), (byte bd, byte bc, uint[] values)> decompressionTables
+            = new Dictionary<(byte tt, byte st), (byte bd, byte bc, uint[] values)>();
+
         private Dictionary<int, StreamData> streamTable = new Dictionary<int, StreamData>();
 
         private SegaPcm segaPcm;
@@ -1144,6 +1149,9 @@ namespace zanac.VGMPlayer
                 {
                     Accepted = true;
 
+                    //HACK: Init Pan
+                    DeferredWritePWMReg(0x01, 0x05);
+
                     return true;
                 }
             }
@@ -1771,11 +1779,11 @@ namespace zanac.VGMPlayer
                                         SCCType type = (SCCType)comPortSCC.Tag["SCC.Type"];
                                         var slot = (int)comPortSCC.Tag["SCC.Slot"];
                                         if ((int)slot < 0)
-                                            //©“®‘I‘ğ•û®
+                                            //è‡ªå‹•é¸æŠæ–¹å¼
                                             comPortSCC.DeferredWriteData(3, (byte)type,
                                                 (byte)(-((int)slot + 1)), (int)Program.Default.BitBangWaitSCC);
                                         else
-                                            //]—ˆ•û®
+                                            //å¾“æ¥æ–¹å¼
                                             comPortSCC.DeferredWriteData(3, (byte)(type + 4),
                                                 (byte)slot, (int)Program.Default.BitBangWaitSCC);
 
@@ -2944,7 +2952,7 @@ namespace zanac.VGMPlayer
         }
 
         /// <summary>
-        /// OPNA‚ÌRAMType‚ğƒf[ƒ^‚©‚ç’²‚×‚é
+        /// OPNAã®RAMTypeã‚’ãƒ‡ãƒ¼ã‚¿ã‹ã‚‰èª¿ã¹ã‚‹
         /// </summary>
         /// <returns>true:x8bit false:x1bit</returns>
         private bool searchOpnaRamType(byte[] vgmBuf)
@@ -3010,7 +3018,7 @@ namespace zanac.VGMPlayer
 
 
         /// <summary>
-        /// Y8950‚ÌRAMType‚ğƒf[ƒ^‚©‚ç’²‚×‚é
+        /// Y8950ã®RAMTypeã‚’ãƒ‡ãƒ¼ã‚¿ã‹ã‚‰èª¿ã¹ã‚‹
         /// </summary>
         /// <returns>true:64kbit false:256kbit</returns>
         private bool searchY8950RamType(byte[] vgmBuf)
@@ -3085,6 +3093,116 @@ namespace zanac.VGMPlayer
 
             byte data = vgmReader.ReadByte();
             return data;
+        }
+
+        /// <summary>
+        /// VGM compressed data block (type 0x40..0x7E) ã®å±•é–‹å‡¦ç†
+        /// å‚è€ƒ: https://vgmrips.net/wiki/VGM_Specification  Data blocks 40..7E
+        /// </summary>
+        /// <param name="compressedData">åœ§ç¸®ãƒ‡ãƒ¼ã‚¿ (0x0A bytes) ã®ãƒ˜ãƒƒãƒ€æƒ…å ±ã‚’å«ã‚€</param>
+        /// <param name="compressionType">tt: 0=bit packing, 1=DPCM</param>
+        /// <param name="subType">st: bit packing ã®å ´åˆ (0=copy,1=shift,2=table) / DPCM ã®å ´åˆ 0 å›ºå®š</param>
+        /// <param name="bitsDecompressed">bd: å±•é–‹å¾Œã®ãƒ“ãƒƒãƒˆæ•°</param>
+        /// <param name="bitsCompressed">bc: åœ§ç¸®å¾Œã®ãƒ“ãƒƒãƒˆæ•°</param>
+        /// <param name="addend">aa: bit packing ã®å ´åˆã®åˆæœŸå€¤ (table ä½¿ç”¨æ™‚ã¯ç„¡è¦–)</param>
+        /// <param name="uncompressedSize">å±•é–‹å¾Œã®ãƒ‡ãƒ¼ã‚¿ã‚µã‚¤ã‚º</param>
+        /// <returns>å±•é–‹å¾Œã®ãƒ‡ãƒ¼ã‚¿</returns>
+        private byte[] DecompressVgmBlock(byte[] compressedData, byte compressionType, byte subType,
+            byte bitsDecompressed, byte bitsCompressed, ushort addend, uint uncompressedSize)
+        {
+            int bytesPerValue = (bitsDecompressed + 7) / 8;
+            int valueCount = (int)(uncompressedSize / bytesPerValue);
+            var result = new List<byte>((int)uncompressedSize);
+
+            // vgmplay ã¨åŒã˜ãƒ“ãƒƒãƒˆèª­ã¿å–ã‚Šã‚¢ãƒ«ã‚´ãƒªã‚ºãƒ :
+            //   å„ãƒã‚¤ãƒˆå†…ã¯ä¸Šä½ãƒ“ãƒƒãƒˆ(MSB)ã‹ã‚‰èª­ã‚€ã€‚
+            //   8ãƒ“ãƒƒãƒˆå˜ä½ã®ãƒãƒ£ãƒ³ã‚¯ã‚’å‡ºåŠ›å€¤ã®ä¸‹ä½ãƒ“ãƒƒãƒˆã‹ã‚‰é †ã«ç©ã¿ä¸Šã’ã‚‹ã€‚
+            //   cf. DecompressDataBlk in vgmplay/VGMPlay.c
+            int inShift = 0;    // ç¾åœ¨ã®ãƒã‚¤ãƒˆå†…ã§æ¶ˆè²»æ¸ˆã¿ã®ãƒ“ãƒƒãƒˆæ•° (0..7)
+            int srcIndex = 0;
+
+            uint ReadBits(int bitsToRead)
+            {
+                uint val = 0;
+                int outBit = 0;
+                while (bitsToRead > 0)
+                {
+                    int chunkBits = bitsToRead >= 8 ? 8 : bitsToRead;
+                    bitsToRead -= chunkBits;
+
+                    // inShift ã‚’é€²ã‚ã¦ãƒã‚¤ãƒˆä¸Šä½ã‹ã‚‰ chunkBits å–ã‚Šå‡ºã™
+                    inShift += chunkBits;
+                    int curByte = srcIndex < compressedData.Length ? compressedData[srcIndex] : 0;
+                    // (*InPos << inShift >> 8) & mask  â† vgmplay ã®å¼
+                    uint chunk = (uint)((curByte << inShift >> 8) & ((1 << chunkBits) - 1));
+                    if (inShift >= 8)
+                    {
+                        inShift -= 8;
+                        srcIndex++;
+                        if (inShift > 0 && srcIndex < compressedData.Length)
+                        {
+                            // æ¬¡ã®ãƒã‚¤ãƒˆã®ä¸Šä½ inShift ãƒ“ãƒƒãƒˆã‚‚åˆæˆã™ã‚‹
+                            curByte = compressedData[srcIndex];
+                            chunk |= (uint)((curByte << inShift >> 8) & ((1 << chunkBits) - 1));
+                        }
+                    }
+                    val |= chunk << outBit;
+                    outBit += chunkBits;
+                }
+                return val;
+            }
+
+            if (compressionType == 0) // bit packing
+            {
+                for (int i = 0; i < valueCount; i++)
+                {
+                    uint raw = ReadBits(bitsCompressed);
+                    uint decompVal;
+                    switch (subType)
+                    {
+                        case 0: // copy: upper bits are unused, value is raw + addend
+                            decompVal = (raw + addend) & ((1u << bitsDecompressed) - 1);
+                            break;
+                        case 1: // shift left: low bits are unused
+                            decompVal = ((raw << (bitsDecompressed - bitsCompressed)) + addend)
+                                        & ((1u << bitsDecompressed) - 1);
+                            break;
+                        case 2: // table lookup
+                            {
+                                if (decompressionTables.TryGetValue((0, 2), out var tbl) && raw < tbl.values.Length)
+                                    decompVal = tbl.values[raw];
+                                else
+                                    decompVal = (raw + addend) & ((1u << bitsDecompressed) - 1);
+                            }
+                            break;
+                        default:
+                            decompVal = (raw + addend) & ((1u << bitsDecompressed) - 1);
+                            break;
+                    }
+                    // å±•é–‹å¾Œã®ãƒ‡ãƒ¼ã‚¿ã‚’ bytesPerValue ãƒã‚¤ãƒˆå˜ä½ã§è¿½åŠ 
+                    for (int b = 0; b < bytesPerValue; b++)
+                        result.Add((byte)(decompVal >> (b * 8)));
+                }
+            }
+            else if (compressionType == 1) // DPCM
+            {
+                decompressionTables.TryGetValue((1, 0), out var deltaTbl);
+                uint state = addend; // åˆæœŸå€¤ = aa
+                for (int i = 0; i < valueCount; i++)
+                {
+                    uint idx = ReadBits(bitsCompressed);
+                    if (deltaTbl.values != null && idx < deltaTbl.values.Length)
+                        state = (state + deltaTbl.values[idx]) & ((1u << bitsDecompressed) - 1);
+                    for (int b = 0; b < bytesPerValue; b++)
+                        result.Add((byte)(state >> (b * 8)));
+                }
+            }
+
+            // éåœ§ç¸®ãƒ‡ãƒ¼ã‚¿ãŒä¸è¶³ã—ã¦ã„ã‚‹å ´åˆã®è£œå®Œ
+            while (result.Count < (int)uncompressedSize)
+                result.Add(0);
+
+            return result.ToArray();
         }
 
         private bool ym2608_adpcmbit8;
@@ -4222,6 +4340,16 @@ namespace zanac.VGMPlayer
                                                             }
                                                         }
                                                         break;
+                                                    case 3: //PWM PCM data for use with associated commands
+                                                        {
+                                                            dacDataOffset.Add(dacData.Count);
+                                                            dacDataLength.Add((int)size);
+                                                            if (size == 0)
+                                                                dacData.AddRange(new byte[] { 0 });
+                                                            else
+                                                                dacData.AddRange(vgmReader.ReadBytes((int)size));
+                                                        }
+                                                        break;
                                                     case 4: //OKIM6258 ADPCM data for use with associated commands
                                                         {
                                                             dacDataOffset.Add(dacData.Count);
@@ -4265,6 +4393,140 @@ namespace zanac.VGMPlayer
                                                                 dacData.AddRange(new byte[] { 0 });
                                                             else
                                                                 dacData.AddRange(vgmReader.ReadBytes((int)size));
+                                                        }
+                                                        break;
+
+                                                    case 0x40: //YM2612 compressed PCM (same as 0x00 but compressed)
+                                                    case 0x41: //RF5C68 compressed
+                                                    case 0x42: //RF5C164 compressed
+                                                    case 0x43: //PWM compressed
+                                                    case 0x44: //OKIM6258 compressed
+                                                    case 0x45: //HuC6280 compressed
+                                                    case 0x46: //SCSP compressed
+                                                    case 0x47: //NES DPCM compressed
+                                                    case int compDtype when (compDtype >= 0x48 && compDtype <= 0x7E):
+                                                        {
+                                                            // åœ§ç¸®ãƒ‡ãƒ¼ã‚¿ãƒ˜ãƒƒãƒ€ (10 bytes):
+                                                            //   tt (8 bits)         = åœ§ç¸®ã‚¿ã‚¤ãƒ— (0=ãƒ“ãƒƒãƒˆãƒ‘ãƒƒã‚­ãƒ³ã‚°, 1=DPCM)
+                                                            //   ss ss ss ss (32 bits)= éåœ§ç¸®ã‚µã‚¤ã‚º (ãƒã‚¤ãƒˆå˜ä½)
+                                                            //   bd (8 bits)         = å±•é–‹å¾Œã®ãƒ“ãƒƒãƒˆæ•°
+                                                            //   bc (8 bits)         = åœ§ç¸®å¾Œã®ãƒ“ãƒƒãƒˆæ•°
+                                                            //   st (8 bits)         = åœ§ç¸®ã‚µãƒ–ã‚¿ã‚¤ãƒ—
+                                                            //   aa aa (16 bits)     = addend
+                                                            if (size < 0x0A)
+                                                            {
+                                                                if (size > 0)
+                                                                    vgmReader.ReadBytes((int)size);
+                                                                break;
+                                                            }
+                                                            byte compType = vgmReader.ReadByte();
+                                                            uint uncompSize = vgmReader.ReadUInt32();
+                                                            byte bitsDecomp = vgmReader.ReadByte();
+                                                            byte bitsComp = vgmReader.ReadByte();
+                                                            byte compSubType = vgmReader.ReadByte();
+                                                            ushort compAddend = vgmReader.ReadUInt16();
+                                                            uint compDataSize = size - 0x0A;
+                                                            byte[] compRaw = compDataSize > 0 ? vgmReader.ReadBytes((int)compDataSize) : new byte[0];
+
+                                                            byte[] decompressed = DecompressVgmBlock(
+                                                                compRaw, compType, compSubType,
+                                                                bitsDecomp, bitsComp, compAddend, uncompSize);
+
+                                                            // å±•é–‹å¾Œã®ãƒ‡ãƒ¼ã‚¿ã‚¿ã‚¤ãƒ— (dtype - 0x40) ã«å¿œã˜ã¦å‡¦ç†ã‚’åˆ†å²
+                                                            int uncompDtype = dtype - 0x40;
+                                                            switch (uncompDtype)
+                                                            {
+                                                                case 1: //RF5C68
+                                                                case 2: //RF5C164
+                                                                    if (comPortMCD != null)
+                                                                    {
+                                                                        byte prevbank = 0xff;
+                                                                        int percentage = 0;
+                                                                        int lastPercentage = -1;
+                                                                        for (int i = 0; i < decompressed.Length; i++)
+                                                                        {
+                                                                            if (i <= 8)
+                                                                            {
+                                                                                DeferredWriteMCDReg(i & 0x1f, decompressed[i]);
+                                                                            }
+                                                                            else if (i >= 0x1000)
+                                                                            {
+                                                                                byte bank = (byte)(((i - 0x1000) >> 12) & 0xf);
+                                                                                if (bank != prevbank)
+                                                                                {
+                                                                                    DeferredWriteMCDReg(0x7, bank);
+                                                                                    prevbank = bank;
+                                                                                }
+                                                                                DeferredWriteMCDMem((i - 0x1000) & 0xfff, decompressed[i]);
+
+                                                                                percentage = (int)((100L * i) / decompressed.Length);
+                                                                                if (percentage != lastPercentage)
+                                                                                {
+                                                                                    lastPercentage = percentage;
+                                                                                    FormMain.TopForm.SetStatusText("RF5C164: Transferring PCM(" + percentage + "%)");
+                                                                                    switch (comPortMCD.SoundModuleType)
+                                                                                    {
+                                                                                        case VsifSoundModuleType.Genesis_FTDI:
+                                                                                            comPortMCD?.FlushDeferredWriteDataAndWait();
+                                                                                            break;
+                                                                                    }
+                                                                                }
+                                                                            }
+                                                                        }
+                                                                        switch (comPortMCD.SoundModuleType)
+                                                                        {
+                                                                            case VsifSoundModuleType.Genesis_FTDI:
+                                                                                comPortMCD?.FlushDeferredWriteDataAndWait();
+                                                                                break;
+                                                                        }
+                                                                        DeferredWriteMCDReg(0x08, 0xFF);
+                                                                        FormMain.TopForm.SetStatusText("RF5C164: Transferred PCM.");
+                                                                    }
+                                                                    break;
+                                                                default:
+                                                                    // YM2612(0), PWM(3), OKIM6258(4), HuC6280(5), SCSP(6), NES DPCM(7) etc.
+                                                                    dacDataOffset.Add(dacData.Count);
+                                                                    dacDataLength.Add(decompressed.Length);
+                                                                    if (decompressed.Length == 0)
+                                                                        dacData.AddRange(new byte[] { 0 });
+                                                                    else
+                                                                        dacData.AddRange(decompressed);
+                                                                    break;
+                                                            }
+                                                        }
+                                                        break;
+                                                    case 0x7F:  //decompression table
+                                                        {
+                                                            // data block 7F format:
+                                                            //   tt (8 bits) = compression type
+                                                            //   st (8 bits) = compression sub-type
+                                                            //   bd (8 bits) = bits decompressed
+                                                            //   bc (8 bits) = bits compressed (for verification)
+                                                            //   cc cc (16 bits) = number of following values
+                                                            //   (data) = table data, cc values of ceil(bd/8) bytes each
+                                                            if (size < 6)
+                                                            {
+                                                                // block too small; skip remaining bytes
+                                                                if (size > 0)
+                                                                    vgmReader.ReadBytes((int)size);
+                                                                break;
+                                                            }
+                                                            byte tt = vgmReader.ReadByte(); // compression type
+                                                            byte st = vgmReader.ReadByte(); // compression sub-type
+                                                            byte bd = vgmReader.ReadByte(); // bits decompressed
+                                                            byte bc = vgmReader.ReadByte(); // bits compressed
+                                                            ushort cc = vgmReader.ReadUInt16(); // number of values
+                                                            int bytesPerValue = (bd + 7) / 8;
+                                                            uint[] tableValues = new uint[cc];
+                                                            for (int ti = 0; ti < cc; ti++)
+                                                            {
+                                                                uint val = 0;
+                                                                for (int bi = 0; bi < bytesPerValue; bi++)
+                                                                    val |= (uint)vgmReader.ReadByte() << (bi * 8);
+                                                                tableValues[ti] = val;
+                                                            }
+                                                            // if multiple tables of the same tt/st exist, the new one overrides the old one
+                                                            decompressionTables[(tt, st)] = (bd, bc, tableValues);
                                                         }
                                                         break;
                                                     case 0x80:  //SEGA PCM
@@ -4603,6 +4865,26 @@ namespace zanac.VGMPlayer
                                                     }
                                                     break;
 
+                                                case 17:   //PWM
+                                                    {
+                                                        if (port == 0x00)
+                                                        {
+                                                            switch (cmd)
+                                                            {
+                                                                case 0x1:   //PWM ENABLE
+                                                                case 0x2:   //PWM ENABLE
+                                                                case 0x4:   //PWM ENABLE
+                                                                case 0x8:   //PWM ENABLE
+                                                                    dacStream = new DacStream(this, DacStream.DacProxyType.PWM, comPortPWM, null);
+                                                                    Thread t = new Thread(new ThreadStart(dacStream.StreamSong));
+                                                                    t.Priority = ThreadPriority.Highest;
+                                                                    t.Start();
+                                                                    break;
+                                                            }
+                                                        }
+                                                    }
+                                                    break;
+
                                                 case 20:   //NES
                                                     if (port == 0x00 && cmd == 0x11)    //PCM ENABLE
                                                     {
@@ -4908,6 +5190,8 @@ namespace zanac.VGMPlayer
 
                                             if (comPortPWM != null)
                                             {
+                                                if (((adrs & 0xf0) == 0x00) && (dt & 0x0f) == 0x00) //HACK: skip control reg0 MUTE
+                                                    break;
                                                 DeferredWritePWMReg(adrs, (byte)dt);
                                             }
                                             break;
@@ -5423,7 +5707,7 @@ namespace zanac.VGMPlayer
                 byte[] chunkData = new byte[chunkSize];
                 Array.Copy(romData, oi, chunkData, 0, sz);
 
-                // ‚±‚±‚Åchunk‚ğg‚Á‚Äˆ—‚ğs‚¤
+                // ã“ã“ã§chunkã‚’ä½¿ã£ã¦å‡¦ç†ã‚’è¡Œã†
                 bool erase = false;
                 if (!adpcmMemoryErased[memoryType - 1].ContainsKey((saddr >> 16)))
                 {
@@ -5601,11 +5885,11 @@ namespace zanac.VGMPlayer
                         SCCType type = (SCCType)comPortSCC.Tag["SCC.Type"];
                         var slot = (int)comPortSCC.Tag["SCC.Slot"];
                         if ((int)slot < 0)
-                            //©“®‘I‘ğ•û®
+                            //è‡ªå‹•é¸æŠæ–¹å¼
                             comPortSCC.DeferredWriteData(3, (byte)type,
                                 (byte)(-((int)slot + 1)), (int)Program.Default.BitBangWaitSCC);
                         else
-                            //]—ˆ•û®
+                            //å¾“æ¥æ–¹å¼
                             comPortSCC.DeferredWriteData(3, (byte)(type + 4),
                                 (byte)slot, (int)Program.Default.BitBangWaitSCC);
 
@@ -5845,6 +6129,8 @@ namespace zanac.VGMPlayer
 
         private void sendPwmData(byte addressAndData, byte data, int f_ftdiClkWidth, bool wait)
         {
+            if (addressAndData >> 4 <= 1)
+                Debug.WriteLine("PWM: " + (addressAndData >> 4).ToString("X2") + " " + (((addressAndData & 0xf) << 8) + data).ToString("X4"));
             comPortPWM.DeferredWriteData(
                 new byte[] { 0, 0 },
                 new byte[] { 6 << 2, 7 << 2 },
@@ -6347,15 +6633,15 @@ namespace zanac.VGMPlayer
 
             int wait = (int)Program.Default.BitBangWaitY8950;
 
-            //$07ƒŒƒWƒXƒ^ƒŠƒZƒbƒg
+            //$07ãƒ¬ã‚¸ã‚¹ã‚¿ãƒªã‚»ãƒƒãƒˆ
             Y8950WriteData(comPortY8950, 0x07, 0, slot, 0, 0, (byte)0x01, false, wait);
 
-            //Šeƒtƒ‰ƒO‚ğƒCƒl[ƒuƒ‹‚É‚·‚éB
+            //å„ãƒ•ãƒ©ã‚°ã‚’ã‚¤ãƒãƒ¼ãƒ–ãƒ«ã«ã™ã‚‹ã€‚
             Y8950WriteData(comPortY8950, 0x04, 0, slot, 0, 0, 0x00, false, wait);
-            //Šeƒtƒ‰ƒO‚ğƒŠƒZƒbƒgB
+            //å„ãƒ•ãƒ©ã‚°ã‚’ãƒªã‚»ãƒƒãƒˆã€‚
             Y8950WriteData(comPortY8950, 0x04, 0, slot, 0, 0, 0x80, false, wait);
 
-            //ƒƒ‚ƒŠƒ‰ƒCƒgƒ‚[ƒh‚É‚·‚éB
+            //ãƒ¡ãƒ¢ãƒªãƒ©ã‚¤ãƒˆãƒ¢ãƒ¼ãƒ‰ã«ã™ã‚‹ã€‚
             Y8950WriteData(comPortY8950, 0x07, 0, slot, 0, 0, 0x60, false, wait);
 
             if (comPortY8950 != null)
@@ -6364,7 +6650,7 @@ namespace zanac.VGMPlayer
                 //{
                 //    case 0:
                 //    case 2:
-                //        //RAMƒ^ƒCƒv‚Ìw’èB64Kbit
+                //        //RAMã‚¿ã‚¤ãƒ—ã®æŒ‡å®šã€‚64Kbit
                 //        YMF262WriteData(comPortY8950, 0x08, 0, slot, 0, 0, 0x02);
 
                 //        if ((saddr & 0b1000) == 0b1000)
@@ -6381,7 +6667,7 @@ namespace zanac.VGMPlayer
                 //        break;
                 //    case 1:
                 //    case 3:
-                //        //RAMƒ^ƒCƒv‚Ìw’èB256Kbit
+                //        //RAMã‚¿ã‚¤ãƒ—ã®æŒ‡å®šã€‚256Kbit
                 //        YMF262WriteData(comPortY8950, 0x08, 0, slot, 0, 0, 0x00);
                 //        //START
                 //        YMF262WriteData(comPortY8950, 0x09, 0, slot, 0, 0, (byte)((saddr >> 5) & 0xff));
@@ -6397,7 +6683,7 @@ namespace zanac.VGMPlayer
 
                 if (y8950_adpcmbit64k)
                 {
-                    //ƒƒ‚ƒŠ‚Ìƒ^ƒCƒvw’èB64Kbit
+                    //ãƒ¡ãƒ¢ãƒªã®ã‚¿ã‚¤ãƒ—æŒ‡å®šã€‚64Kbit
                     Y8950WriteData(comPortY8950, 0x08, 0, slot, 0, 0, 0x02, false, wait);
 
                     if ((saddr & 0b1000) == 0b1000)
@@ -6418,7 +6704,7 @@ namespace zanac.VGMPlayer
                 }
                 else
                 {
-                    //ƒƒ‚ƒŠ‚Ìƒ^ƒCƒvw’èB256Kbit
+                    //ãƒ¡ãƒ¢ãƒªã®ã‚¿ã‚¤ãƒ—æŒ‡å®šã€‚256Kbit
                     Y8950WriteData(comPortY8950, 0x08, 0, slot, 0, 0, 0x00, false, wait);
                     //START
                     Y8950WriteData(comPortY8950, 0x09, 0, slot, 0, 0, (byte)(saddr & 0xff), false, wait);
@@ -6467,7 +6753,7 @@ namespace zanac.VGMPlayer
                     //{
                     //    case 0:
                     //    case 2:
-                    //        //RAMƒ^ƒCƒv‚Ìw’èB64Kbit
+                    //        //RAMã‚¿ã‚¤ãƒ—ã®æŒ‡å®šã€‚64Kbit
                     //        if ((endAddress & 0b1000) == 0b1000)
                     //            endAddress += 0b1000;
                     //        if ((endAddress & 0b1_0000_0000_0000) == 0b1_0000_0000_0000)
@@ -6491,9 +6777,9 @@ namespace zanac.VGMPlayer
             }
             FormMain.TopForm.SetStatusText("Y8950: Transferred ADPCM");
 
-            //›ƒŠƒZƒbƒg
+            //â—‹ãƒªã‚»ãƒƒãƒˆ
             Y8950WriteData(comPortY8950, 0x04, 0, slot, 0, 0, (byte)0x80, false, wait);
-            //$07ƒŒƒWƒXƒ^ƒŠƒZƒbƒg
+            //$07ãƒ¬ã‚¸ã‚¹ã‚¿ãƒªã‚»ãƒƒãƒˆ
             Y8950WriteData(comPortY8950, 0x07, 0, slot, 0, 0, (byte)0x01, false, wait);
         }
 
@@ -6921,13 +7207,13 @@ namespace zanac.VGMPlayer
             {
                 if (disposing)
                 {
-                    // ƒ}ƒl[ƒWƒhó‘Ô‚ğ”jŠü‚µ‚Ü‚· (ƒ}ƒl[ƒWƒh ƒIƒuƒWƒFƒNƒg)
+                    // ãƒãƒãƒ¼ã‚¸ãƒ‰çŠ¶æ…‹ã‚’ç ´æ£„ã—ã¾ã™ (ãƒãƒãƒ¼ã‚¸ãƒ‰ ã‚ªãƒ–ã‚¸ã‚§ã‚¯ãƒˆ)
                     Stop();
                 }
 
                 vgmReader?.Dispose();
 
-                // ƒAƒ“ƒ}ƒl[ƒWƒh ƒŠƒ\[ƒX (ƒAƒ“ƒ}ƒl[ƒWƒh ƒIƒuƒWƒFƒNƒg) ‚ğ‰ğ•ú‚µAƒtƒ@ƒCƒiƒ‰ƒCƒU[‚ğƒI[ƒo[ƒ‰ƒCƒh‚µ‚Ü‚·
+                // ã‚¢ãƒ³ãƒãƒãƒ¼ã‚¸ãƒ‰ ãƒªã‚½ãƒ¼ã‚¹ (ã‚¢ãƒ³ãƒãƒãƒ¼ã‚¸ãƒ‰ ã‚ªãƒ–ã‚¸ã‚§ã‚¯ãƒˆ) ã‚’è§£æ”¾ã—ã€ãƒ•ã‚¡ã‚¤ãƒŠãƒ©ã‚¤ã‚¶ãƒ¼ã‚’ã‚ªãƒ¼ãƒãƒ¼ãƒ©ã‚¤ãƒ‰ã—ã¾ã™
                 comPortDCSG?.Dispose();
                 comPortDCSG = null;
                 comPortOPLL?.Dispose();
@@ -6980,22 +7266,22 @@ namespace zanac.VGMPlayer
                 vgmLogFile?.Flush();
                 vgmLogFile?.Dispose();
 #endif
-                // ‘å‚«‚ÈƒtƒB[ƒ‹ƒh‚ğ null ‚Éİ’è‚µ‚Ü‚·
+                // å¤§ããªãƒ•ã‚£ãƒ¼ãƒ«ãƒ‰ã‚’ null ã«è¨­å®šã—ã¾ã™
                 disposedValue = true;
             }
             base.Dispose(disposing);
         }
 
-        // 'Dispose(bool disposing)' ‚ÉƒAƒ“ƒ}ƒl[ƒWƒh ƒŠƒ\[ƒX‚ğ‰ğ•ú‚·‚éƒR[ƒh‚ªŠÜ‚Ü‚ê‚éê‡‚É‚Ì‚İAƒtƒ@ƒCƒiƒ‰ƒCƒU[‚ğƒI[ƒo[ƒ‰ƒCƒh‚µ‚Ü‚·
+        // 'Dispose(bool disposing)' ã«ã‚¢ãƒ³ãƒãƒãƒ¼ã‚¸ãƒ‰ ãƒªã‚½ãƒ¼ã‚¹ã‚’è§£æ”¾ã™ã‚‹ã‚³ãƒ¼ãƒ‰ãŒå«ã¾ã‚Œã‚‹å ´åˆã«ã®ã¿ã€ãƒ•ã‚¡ã‚¤ãƒŠãƒ©ã‚¤ã‚¶ãƒ¼ã‚’ã‚ªãƒ¼ãƒãƒ¼ãƒ©ã‚¤ãƒ‰ã—ã¾ã™
         ~VGMSong()
         {
-            // ‚±‚ÌƒR[ƒh‚ğ•ÏX‚µ‚È‚¢‚Å‚­‚¾‚³‚¢BƒNƒŠ[ƒ“ƒAƒbƒv ƒR[ƒh‚ğ 'Dispose(bool disposing)' ƒƒ\ƒbƒh‚É‹Lq‚µ‚Ü‚·
+            // ã“ã®ã‚³ãƒ¼ãƒ‰ã‚’å¤‰æ›´ã—ãªã„ã§ãã ã•ã„ã€‚ã‚¯ãƒªãƒ¼ãƒ³ã‚¢ãƒƒãƒ— ã‚³ãƒ¼ãƒ‰ã‚’ 'Dispose(bool disposing)' ãƒ¡ã‚½ãƒƒãƒ‰ã«è¨˜è¿°ã—ã¾ã™
             Dispose(disposing: false);
         }
 
         public override void Dispose()
         {
-            // ‚±‚ÌƒR[ƒh‚ğ•ÏX‚µ‚È‚¢‚Å‚­‚¾‚³‚¢BƒNƒŠ[ƒ“ƒAƒbƒv ƒR[ƒh‚ğ 'Dispose(bool disposing)' ƒƒ\ƒbƒh‚É‹Lq‚µ‚Ü‚·
+            // ã“ã®ã‚³ãƒ¼ãƒ‰ã‚’å¤‰æ›´ã—ãªã„ã§ãã ã•ã„ã€‚ã‚¯ãƒªãƒ¼ãƒ³ã‚¢ãƒƒãƒ— ã‚³ãƒ¼ãƒ‰ã‚’ 'Dispose(bool disposing)' ãƒ¡ã‚½ãƒƒãƒ‰ã«è¨˜è¿°ã—ã¾ã™
             Dispose(disposing: true);
             GC.SuppressFinalize(this);
         }
@@ -7009,19 +7295,19 @@ namespace zanac.VGMPlayer
         uint[] oki6258_clock_buffer = new uint[4];
 
         /// <summary>
-        /// PCM’l
+        /// PCMå€¤
         /// </summary>
         int pcmValueForEncode = 0;
         /// <summary>
-        /// —\‘ª•Ï‰»—Ê
+        /// äºˆæ¸¬å¤‰åŒ–é‡
         /// </summary>
         int predictValueForEncode = 127;
         /// <summary>
-        /// 8bitƒf[ƒ^‚Ì1‚Â–Ú(ãˆÊ4bit)‚©‚Ç‚¤‚©
+        /// 8bitãƒ‡ãƒ¼ã‚¿ã®1ã¤ç›®(ä¸Šä½4bit)ã‹ã©ã†ã‹
         /// </summary>
         bool firstDataForEncode = true;
         /// <summary>
-        /// ÀÛ‚ÌADPCMo—Í’l
+        /// å®Ÿéš›ã®ADPCMå‡ºåŠ›å€¤
         /// </summary>
         byte outputValueForEncode = 0;
 
@@ -7029,11 +7315,11 @@ namespace zanac.VGMPlayer
         {
             int? retValue = null;
             //https://www.piece-me.org/piece-lab/adpcm/adpcm2.html
-            //•Ï‰»—Ê <- PCM“ü—Í’l - PCM’l
+            //å¤‰åŒ–é‡ <- PCMå…¥åŠ›å€¤ - PCMå€¤
             int deltaValue = (inputValue * 256) - pcmValueForEncode;
-            //ADPCM’l
+            //ADPCMå€¤
             int adpcmData = 0;
-            //—\‘ª•Ï‰»’l‚É‘Î‚·‚é•Ï‰»—Ê‚Ì”ä—¦‚É‚æ‚Á‚ÄADPCM’l‚ğŒˆ’è
+            //äºˆæ¸¬å¤‰åŒ–å€¤ã«å¯¾ã™ã‚‹å¤‰åŒ–é‡ã®æ¯”ç‡ã«ã‚ˆã£ã¦ADPCMå€¤ã‚’æ±ºå®š
             if (predictValueForEncode * 14 / 8 <= deltaValue)
                 adpcmData = 7;
             else if (predictValueForEncode * 12 / 8 <= deltaValue && deltaValue < predictValueForEncode * 14 / 8)
@@ -7067,7 +7353,7 @@ namespace zanac.VGMPlayer
             else if (deltaValue < predictValueForEncode * -14 / 8)
                 adpcmData = 15;
 
-            //o—Í
+            //å‡ºåŠ›
             if (firstDataForEncode)
             {
                 outputValueForEncode = (byte)(adpcmData << 4);
@@ -7082,21 +7368,21 @@ namespace zanac.VGMPlayer
                 firstDataForEncode = true;
             }
 
-            //•Ï‰»—¦ = ADPCM’l‚Ìbit2-0
+            //å¤‰åŒ–ç‡ = ADPCMå€¤ã®bit2-0
             int factor = adpcmData & 0x7;
-            //•Ï‰»—Ê <- —\‘ª•Ï‰»—Ê x (•Ï‰»—¦ x 2 + 1) / 8
+            //å¤‰åŒ–é‡ <- äºˆæ¸¬å¤‰åŒ–é‡ x (å¤‰åŒ–ç‡ x 2 + 1) / 8
             deltaValue = predictValueForEncode * (factor * 2 + 1) / 8;
             if ((adpcmData & 0x8) == 0)
             {
-                //‘‰Á
+                //å¢—åŠ 
                 pcmValueForEncode = pcmValueForEncode + deltaValue;
             }
             else
             {
-                //Œ¸­
+                //æ¸›å°‘
                 pcmValueForEncode = pcmValueForEncode - deltaValue;
             }
-            //•Ï‰»—¦‚É‚æ‚Á‚ÄŸ‰ñ‚Ì—\‘ª•Ï‰»—Ê‚ğXV
+            //å¤‰åŒ–ç‡ã«ã‚ˆã£ã¦æ¬¡å›ã®äºˆæ¸¬å¤‰åŒ–é‡ã‚’æ›´æ–°
             switch (factor)
             {
                 case 0:
@@ -7135,11 +7421,11 @@ namespace zanac.VGMPlayer
 
 
         /// <summary>
-        /// PCM’l
+        /// PCMå€¤
         /// </summary>
         int pcmValueForDecode = 0;
         /// <summary>
-        /// —\‘ª•Ï‰»—Ê
+        /// äºˆæ¸¬å¤‰åŒ–é‡
         /// </summary>
         int predictValueForDecode = 127;
 
@@ -7148,20 +7434,20 @@ namespace zanac.VGMPlayer
             int retValue = 0x0;
 
             //https://www.piece-me.org/piece-lab/adpcm/adpcm1.html
-            //•Ï‰»—¦ <- ADPCM’l‚Ìbit2-0
+            //å¤‰åŒ–ç‡ <- ADPCMå€¤ã®bit2-0
             int deltaRatio = inputValue & 0x7;
-            //•Ï‰»—Ê <- —\‘ª•Ï‰»—Ê*(•Ï‰»—¦*2+1)/8
+            //å¤‰åŒ–é‡ <- äºˆæ¸¬å¤‰åŒ–é‡*(å¤‰åŒ–ç‡*2+1)/8
             int deltaValue = predictValueForDecode * ((deltaRatio * 2) + 1) / 8;
             if ((inputValue & 0x8) == 0)
             {
-                //‘‰Á
-                //PCM’l <- PCM’l + •Ï‰»—Ê
+                //å¢—åŠ 
+                //PCMå€¤ <- PCMå€¤ + å¤‰åŒ–é‡
                 pcmValueForDecode = pcmValueForDecode + deltaValue;
             }
             else
             {
-                //Œ¸­
-                //PCM’l <- PCM’l - •Ï‰»—Ê
+                //æ¸›å°‘
+                //PCMå€¤ <- PCMå€¤ - å¤‰åŒ–é‡
                 pcmValueForDecode = pcmValueForDecode - deltaValue;
             }
             pcmValueForDecode = pcmValueForDecode << 4;
@@ -7172,7 +7458,7 @@ namespace zanac.VGMPlayer
 
             retValue = pcmValueForDecode;
 
-            //•Ï‰»—¦‚É‚æ‚Á‚ÄA©‰ú‚Ì—\‘ª•Ï‰»—Ê‚ğXV
+            //å¤‰åŒ–ç‡ã«ã‚ˆã£ã¦ã€è‡ªæˆ’ã®äºˆæ¸¬å¤‰åŒ–é‡ã‚’æ›´æ–°
             switch (deltaRatio)
             {
                 case 0:
