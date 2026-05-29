@@ -2173,7 +2173,13 @@ namespace zanac.VGMPlayer
         private void oPTIONSToolStripMenuItem_Click(object sender, EventArgs e)
         {
             if (formSettings == null)
+            {
                 formSettings = new FormSettings();
+                formSettings.FormClosed += (s, ev) =>
+                {
+                    formSettings = null;
+                };
+            }
             formSettings.Show(this);
         }
 

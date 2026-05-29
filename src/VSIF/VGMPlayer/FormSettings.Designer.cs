@@ -30,6 +30,8 @@
         {
             this.label1 = new System.Windows.Forms.Label();
             this.tableLayoutPanel1 = new System.Windows.Forms.TableLayoutPanel();
+            this.comboBox6 = new System.Windows.Forms.ComboBox();
+            this.label6 = new System.Windows.Forms.Label();
             this.comboBox5 = new System.Windows.Forms.ComboBox();
             this.label5 = new System.Windows.Forms.Label();
             this.comboBox2 = new System.Windows.Forms.ComboBox();
@@ -41,8 +43,6 @@
             this.comboBox4 = new System.Windows.Forms.ComboBox();
             this.checkBoxCoverArt = new System.Windows.Forms.CheckBox();
             this.button2 = new System.Windows.Forms.Button();
-            this.label6 = new System.Windows.Forms.Label();
-            this.comboBox6 = new System.Windows.Forms.ComboBox();
             this.tableLayoutPanel1.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -94,6 +94,34 @@
             this.tableLayoutPanel1.Size = new System.Drawing.Size(320, 187);
             this.tableLayoutPanel1.TabIndex = 0;
             // 
+            // comboBox6
+            // 
+            this.comboBox6.DataBindings.Add(new System.Windows.Forms.Binding("SelectedIndex", global::zanac.VGMPlayer.Properties.Settings.Default, "PWMRate", true, System.Windows.Forms.DataSourceUpdateMode.OnPropertyChanged));
+            this.comboBox6.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.comboBox6.FormattingEnabled = true;
+            this.comboBox6.Items.AddRange(new object[] {
+            "1/1",
+            "1/2(FTDI 232H)",
+            "1/3",
+            "1/4"});
+            this.comboBox6.Location = new System.Drawing.Point(162, 122);
+            this.comboBox6.Margin = new System.Windows.Forms.Padding(2);
+            this.comboBox6.Name = "comboBox6";
+            this.comboBox6.Size = new System.Drawing.Size(156, 20);
+            this.comboBox6.TabIndex = 0;
+            // 
+            // label6
+            // 
+            this.label6.AutoSize = true;
+            this.label6.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.label6.Location = new System.Drawing.Point(2, 120);
+            this.label6.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
+            this.label6.Name = "label6";
+            this.label6.Size = new System.Drawing.Size(156, 20);
+            this.label6.TabIndex = 11;
+            this.label6.Text = "&PWM sample rate:";
+            this.label6.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            // 
             // comboBox5
             // 
             this.comboBox5.DataBindings.Add(new System.Windows.Forms.Binding("SelectedIndex", global::zanac.VGMPlayer.Properties.Settings.Default, "OPNBRate", true, System.Windows.Forms.DataSourceUpdateMode.OnPropertyChanged));
@@ -107,6 +135,7 @@
             this.comboBox5.Margin = new System.Windows.Forms.Padding(2);
             this.comboBox5.Name = "comboBox5";
             this.comboBox5.Size = new System.Drawing.Size(156, 20);
+            this.comboBox5.TabIndex = 12;
             // 
             // label5
             // 
@@ -138,6 +167,7 @@
             this.comboBox2.Margin = new System.Windows.Forms.Padding(2);
             this.comboBox2.Name = "comboBox2";
             this.comboBox2.Size = new System.Drawing.Size(156, 20);
+            this.comboBox2.TabIndex = 13;
             // 
             // label2
             // 
@@ -165,6 +195,7 @@
             this.comboBox1.Margin = new System.Windows.Forms.Padding(2);
             this.comboBox1.Name = "comboBox1";
             this.comboBox1.Size = new System.Drawing.Size(156, 20);
+            this.comboBox1.TabIndex = 14;
             // 
             // label3
             // 
@@ -190,6 +221,7 @@
             this.comboBox3.Margin = new System.Windows.Forms.Padding(2);
             this.comboBox3.Name = "comboBox3";
             this.comboBox3.Size = new System.Drawing.Size(156, 20);
+            this.comboBox3.TabIndex = 15;
             // 
             // label4
             // 
@@ -218,6 +250,7 @@
             this.comboBox4.Margin = new System.Windows.Forms.Padding(2);
             this.comboBox4.Name = "comboBox4";
             this.comboBox4.Size = new System.Drawing.Size(156, 20);
+            this.comboBox4.TabIndex = 16;
             // 
             // checkBoxCoverArt
             // 
@@ -242,35 +275,9 @@
             this.button2.Name = "button2";
             this.button2.Size = new System.Drawing.Size(56, 18);
             this.button2.TabIndex = 1;
-            this.button2.Text = "OK";
+            this.button2.Text = "&Close";
             this.button2.UseVisualStyleBackColor = true;
-            // 
-            // label6
-            // 
-            this.label6.AutoSize = true;
-            this.label6.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.label6.Location = new System.Drawing.Point(2, 120);
-            this.label6.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
-            this.label6.Name = "label6";
-            this.label6.Size = new System.Drawing.Size(156, 20);
-            this.label6.TabIndex = 11;
-            this.label6.Text = "&PWM rate:";
-            this.label6.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            // 
-            // comboBox6
-            // 
-            this.comboBox6.DataBindings.Add(new System.Windows.Forms.Binding("SelectedIndex", global::zanac.VGMPlayer.Properties.Settings.Default, "PWMRate", true, System.Windows.Forms.DataSourceUpdateMode.OnPropertyChanged));
-            this.comboBox6.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.comboBox6.FormattingEnabled = true;
-            this.comboBox6.Items.AddRange(new object[] {
-            "1/1",
-            "1/2(FTDI 232H)",
-            "1/3",
-            "1/4"});
-            this.comboBox6.Location = new System.Drawing.Point(162, 122);
-            this.comboBox6.Margin = new System.Windows.Forms.Padding(2);
-            this.comboBox6.Name = "comboBox6";
-            this.comboBox6.Size = new System.Drawing.Size(156, 20);
+            this.button2.Click += new System.EventHandler(this.button2_Click);
             // 
             // FormSettings
             // 
