@@ -178,6 +178,8 @@ namespace zanac.VGMPlayer
         {
             base.OnClosed(e);
 
+            formSettings?.Dispose();
+
             stopCurrentSong();
 
             comPortDCSG?.Dispose();
@@ -1069,7 +1071,7 @@ namespace zanac.VGMPlayer
                 switch (Settings.Default.PCE_IF)
                 {
                     case 0:
-                        comPortPCE= VsifManager.TryToConnectVSIF(VsifSoundModuleType.TurboEverDrive,
+                        comPortPCE = VsifManager.TryToConnectVSIF(VsifSoundModuleType.TurboEverDrive,
                             (PortId)Settings.Default.PCE_Port, (int)Settings.Default.PCE_Div, false);
                         break;
                 }
@@ -1775,7 +1777,7 @@ namespace zanac.VGMPlayer
                     case 1:
                         comPortOPNB = VsifManager.TryToConnectVSIF(VsifSoundModuleType.MSX_PiTR,
                             (PortId)Settings.Default.OPNB_Port, (int)0, false);
-                        if(comPortOPNB != null)
+                        if (comPortOPNB != null)
                             comPortOPNB.Tag["OPNB.Type"] = comboBoxOPNBType.SelectedIndex;
                         if (comPortOPNB != null)
                             comPortOPNB.DeferredWriteData(0x15, (byte)0x0, (byte)127, (int)0);
@@ -2166,12 +2168,13 @@ namespace zanac.VGMPlayer
             }
         }
 
+        private FormSettings formSettings;
+
         private void oPTIONSToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            using (Form f = new FormSettings())
-            {
-                f.ShowDialog(this);
-            }
+            if (formSettings == null)
+                formSettings = new FormSettings();
+            formSettings.Show(this);
         }
 
         private void vgmripsToolStripMenuItem_Click(object sender, EventArgs e)

@@ -6127,15 +6127,62 @@ namespace zanac.VGMPlayer
             }
         }
 
+        private int[] lastPwmDacData = new int[] { 0, 0, 0, 0, 0 };
+
+        private int[] lastPwmWriteDacData = new int[] { -1, -1, -1, -1, -1 };
+
+        private int[] lastPwmDacCount = new int[] { 0, 0, 0, 0, 0 };
+
+        private int lastPwmCycle = 0;
+
         private void sendPwmData(byte addressAndData, byte data, int f_ftdiClkWidth, bool wait)
         {
+            int idx = (addressAndData >> 4);
+            int pwmdt = (((addressAndData & 0xf) << 8) + data);
+
             if (addressAndData >> 4 <= 1)
                 Debug.WriteLine("PWM: " + (addressAndData >> 4).ToString("X2") + " " + (((addressAndData & 0xf) << 8) + data).ToString("X4"));
-            comPortPWM.DeferredWriteData(
-                new byte[] { 0, 0 },
-                new byte[] { 6 << 2, 7 << 2 },
-                new byte[] { (byte)addressAndData, (byte)data },
-                f_ftdiClkWidth);
+
+            if (idx == 1)
+                lastPwmCycle = pwmdt;
+
+            if (idx >= 2)
+            {
+                if (lastPwmDacCount[idx] >= Program.Default.PWMRate)
+                {
+                    lastPwmDacCount[idx]++;
+                    lastPwmDacData[idx] += pwmdt;
+                    lastPwmDacData[idx] /= lastPwmDacCount[idx];
+
+                    pwmdt = lastPwmDacData[idx];
+                    if (pwmdt >= lastPwmCycle)
+                        pwmdt = (lastPwmCycle - 1);
+                    if (lastPwmWriteDacData[idx] != pwmdt)
+                    {
+                        comPortPWM.DeferredWriteData(
+                            new byte[] { 0, 0 },
+                            new byte[] { 6 << 2, 7 << 2 },
+                            new byte[] { (byte)((addressAndData & 0xf0) | ((pwmdt >> 8) & 0xf)), (byte)(pwmdt & 0xff) },
+                            f_ftdiClkWidth);
+                        lastPwmWriteDacData[idx] = pwmdt;
+                    }
+                    lastPwmDacData[idx] = 0;
+                    lastPwmDacCount[idx] = 0;
+                }
+                else
+                {
+                    lastPwmDacData[idx] += pwmdt;
+                    lastPwmDacCount[idx]++;
+                }
+            }
+            else
+            {
+                comPortPWM.DeferredWriteData(
+                    new byte[] { 0, 0 },
+                    new byte[] { 6 << 2, 7 << 2 },
+                    new byte[] { addressAndData, data },
+                    f_ftdiClkWidth);
+            }
         }
 
 

@@ -182,7 +182,7 @@ namespace zanac.VGMPlayer
                             pd.StreamIdx += pd.StreamIdxDir;
 
                             ((VGMSong)parentSong).DeferredWritePWMReg(0x40 + (dataHi & 0xf), data);
-                            sampleRate = pd.CurrentStreamData.Frequency;
+                            sampleRate = pd.CurrentStreamData.Frequency * 2;
                         }
                         break;
                     case 20:    //NES
