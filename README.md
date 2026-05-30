@@ -1,4 +1,4 @@
-MAmidiMEmo 6.5.2.1 Itoken (c)2019, 2026 / GPL-2.0
+MAmidiMEmo 6.5.2.2 Itoken (c)2019, 2026 / GPL-2.0
 
 *** What is the MAmidiMEmo? ***
 
@@ -278,6 +278,7 @@ e.g.) YM2151 has 8ch FM sounds, so you can play 8 chords on MIDI 1ch or sharing 
    [![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=SNQ9JE3JAQMNQ)
 
 *** Changes
+- 6.5.2.2 Fixed PWM Stereo DAC stream handling for VGMPlayer.
 - 6.5.2.1 Fixed Settings dialog minor issue for VGMPlayer.
 - 6.5.2.0 Added PWM sampling rate settings for VGMPlayer.
   - Improved PWM DAC stream compatibility for VGMPlayer.          

@@ -181,8 +181,22 @@ namespace zanac.VGMPlayer
                             byte dataHi = pd.DacData[pd.StreamIdx];
                             pd.StreamIdx += pd.StreamIdxDir;
 
-                            ((VGMSong)parentSong).DeferredWritePWMReg(0x40 + (dataHi & 0xf), data);
-                            sampleRate = pd.CurrentStreamData.Frequency * 2;
+                            ((VGMSong)parentSong).DeferredWritePWMReg((cc << 4) + (dataHi & 0xf), data);
+
+                            if (pd.CurrentStreamData.StreamDataBanks[3].StepSize == 2)
+                            {
+                                //Stereo
+                                data = pd.DacData[pd.StreamIdx];
+                                pd.StreamIdx += pd.StreamIdxDir;
+                                dataHi = pd.DacData[pd.StreamIdx];
+                                pd.StreamIdx += pd.StreamIdxDir;
+                                if (cc == 2)
+                                    ((VGMSong)parentSong).DeferredWritePWMReg(((cc + 1) << 4) + (dataHi & 0xf), data);
+                                else if (cc == 3)
+                                    ((VGMSong)parentSong).DeferredWritePWMReg(((cc - 1) << 4) + (dataHi & 0xf), data);
+                            }
+
+                            sampleRate = pd.CurrentStreamData.Frequency;
                         }
                         break;
                     case 20:    //NES

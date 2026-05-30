@@ -100,9 +100,9 @@
             this.comboBox6.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.comboBox6.FormattingEnabled = true;
             this.comboBox6.Items.AddRange(new object[] {
-            "1/1",
-            "1/2(FTDI 232H)",
-            "1/3",
+            "1/1(AfterBurner,...)",
+            "1/2(Tempo,...)",
+            "1/3(Kuckles,...)",
             "1/4"});
             this.comboBox6.Location = new System.Drawing.Point(162, 122);
             this.comboBox6.Margin = new System.Windows.Forms.Padding(2);

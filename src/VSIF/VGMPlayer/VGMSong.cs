@@ -4875,7 +4875,7 @@ namespace zanac.VGMPlayer
                                                                 case 0x2:   //PWM ENABLE
                                                                 case 0x4:   //PWM ENABLE
                                                                 case 0x8:   //PWM ENABLE
-                                                                    dacStream = new DacStream(this, DacStream.DacProxyType.PWM, comPortPWM, null);
+                                                                    dacStream = new DacStream(this, DacStream.DacProxyType.PWM, comPortPWM, null, (byte)port, (byte)cmd);
                                                                     Thread t = new Thread(new ThreadStart(dacStream.StreamSong));
                                                                     t.Priority = ThreadPriority.Highest;
                                                                     t.Start();
