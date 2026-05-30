@@ -85,6 +85,10 @@ namespace zanac.VGMPlayer
 
         private PlayDataInfo playData;
 
+        public PlayDataInfo PlayData
+        {
+            get { return playData; }
+        }
 
         /// <summary>
         /// 
@@ -132,7 +136,7 @@ namespace zanac.VGMPlayer
 
                 if (pd.StreamIdxDir > 0)
                 {
-                    if (pd.StreamIdx >= pd.CurrentStreamParam.Offset + pd.CurrentStreamParam.Length)
+                    if (pd.StreamIdx >= pd.CurrentStreamParam.Length)
                     {
                         if ((pd.CurrentStreamParam.Mode & StreamModes.Loop) != StreamModes.Loop)
                             streaming = false;
@@ -361,28 +365,27 @@ namespace zanac.VGMPlayer
             streaming = false;
         }
 
-        /// <summary>
-        /// 
-        /// </summary>
-        private class PlayDataInfo
-        {
-            public int ChipType;
-
-            public StreamData CurrentStreamData = null;
-            public StreamParam CurrentStreamParam = null;
-
-            public int StreamIdxDir;
-            public int StreamIdx;
-
-            public List<byte> DacData;
-
-            public double BeforeTime;
-
-            public bool Oki6285Adpcm2ndNibble;
-        }
-
     }
 
+    /// <summary>
+    /// 
+    /// </summary>
+    public class PlayDataInfo
+    {
+        public int ChipType;
+
+        public StreamData CurrentStreamData = null;
+        public StreamParam CurrentStreamParam = null;
+
+        public int StreamIdxDir;
+        public int StreamIdx;
+
+        public List<byte> DacData;
+
+        public double BeforeTime;
+
+        public bool Oki6285Adpcm2ndNibble;
+    }
 
     [Flags]
     public enum StreamModes

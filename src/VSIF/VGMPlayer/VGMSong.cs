@@ -1,31 +1,32 @@
+using Microsoft.Win32;
+using Microsoft.Win32.SafeHandles;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+using System.Data;
+using System.Diagnostics;
+using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.IO;
 using System.IO.Compression;
+using System.IO.Ports;
+using System.Linq;
+using System.Net;
 using System.Reflection;
 using System.Runtime.InteropServices;
-using zanac.VGMPlayer.Properties;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Win32.SafeHandles;
-using zanac.VGMPlayer;
-using static zanac.VGMPlayer.FormMain;
-using System.Diagnostics;
-using System.Xml.Linq;
-using System.Drawing.Drawing2D;
+using System.Windows;
 using System.Windows.Forms;
-using System.Drawing;
-using Microsoft.Win32;
-using zanac.MAmidiMEmo.Gimic;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement.TextBox;
-using System.Net;
-using System.Windows.Media.Animation;
 using System.Windows.Markup;
 using System.Windows.Media;
-using System.IO.Ports;
-using System.Windows;
+using System.Windows.Media.Animation;
+using System.Xml.Linq;
+using zanac.MAmidiMEmo.Gimic;
+using zanac.VGMPlayer;
+using zanac.VGMPlayer.Properties;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement.TextBox;
+using static zanac.VGMPlayer.FormMain;
 
 //Sega Genesis VGM player. Player written and emulators ported by Landon Podbielski. 
 namespace zanac.VGMPlayer
@@ -4979,20 +4980,69 @@ namespace zanac.VGMPlayer
                                             uint ofst = vgmReader.ReadUInt32();
                                             var lenMode = readByte();
                                             uint dataLen = vgmReader.ReadUInt32();
-                                            if (lenMode == 1)
+                                            StreamParam param = new StreamParam();
+                                            param.StreamID = sid;
+                                            param.BlockID = 0;
+                                            if ((int)ofst != -1)
                                             {
-                                                StreamParam param = new StreamParam();
-                                                param.StreamID = sid;
-                                                param.BlockID = 0;
+                                                //TODO: 
+                                                if (ofst >= dacData.Count)    // catch bad value and force silence
+                                                    break;
+                                                //chip->DataStart = DataPos + CmdStepBase;
                                                 param.Offset = (int)ofst;
-                                                param.Length = (int)dataLen;
-                                                if ((lenMode & 0x80) != 0)
-                                                    param.Mode |= StreamModes.Loop;
-                                                else if ((lenMode & 0x10) != 0)
-                                                    param.Mode |= StreamModes.Reverse;
-
-                                                if (streamTable.ContainsKey(sid))
-                                                    streamTable[sid].DacStream?.Play(param, streamTable[param.StreamID], streamChipType, dacData);
+                                            }
+                                            if ((lenMode & 0x80) != 0)
+                                                param.Mode |= StreamModes.Loop;
+                                            else if ((lenMode & 0x10) != 0)
+                                                param.Mode |= StreamModes.Reverse;
+                                            switch (lenMode & 0xf)
+                                            {
+                                                case 0: // Length is already set - ignore
+                                                    if (streamTable.ContainsKey(sid))
+                                                    {
+                                                        var playData = streamTable[sid].DacStream?.PlayData;
+                                                        if (playData != null)
+                                                        {
+                                                            param.Length = (int)playData.CurrentStreamParam.Length;
+                                                            streamTable[sid].DacStream?.Play(param, streamTable[param.StreamID], streamChipType, dacData);
+                                                        }
+                                                    }
+                                                    break;
+                                                case 1: // Length = number of commands
+                                                    {
+                                                        param.Length = (int)dataLen;
+                                                        if (streamTable.ContainsKey(sid))
+                                                        {
+                                                            streamTable[sid].DacStream?.Play(param, streamTable[param.StreamID], streamChipType, dacData);
+                                                        }
+                                                        break;
+                                                    }
+                                                case 2:// Length = time in msec
+                                                    {
+                                                        //TODO:
+                                                        //param.Length = 1000 * dataLen / chipFreq;
+                                                        param.Length = (int)dataLen;
+                                                    }
+                                                    break;
+                                                case 3:		// play until stop-command is received (or data-end is reached)
+                                                    {
+                                                        //TODO: chip->CmdsToSend = (chip->DataLen - (chip->DataStart - CmdStepBase)) / chip->DataStep;
+                                                        if (streamTable.ContainsKey(sid))
+                                                        {
+                                                            var playData = streamTable[sid].DacStream?.PlayData;
+                                                            if (playData != null)
+                                                            {
+                                                                param.Length = (int)playData.CurrentStreamParam.Length;
+                                                                streamTable[sid].DacStream?.Play(param, streamTable[param.StreamID], streamChipType, dacData);
+                                                            }
+                                                        }
+                                                        break;
+                                                    }
+                                                case 0xF:   //// raw byte count
+                                                    {
+                                                        //chip->CmdsToSend = Length / chip->DataStep;
+                                                        break;
+                                                    }
                                             }
                                         }
                                         break;
