@@ -9,9 +9,6 @@
 #define A_MARS_SYS_OUT_DATA     (*(volatile uint8_t *)0x20004026)	//COMM6
 #define B_MARS_SYS_OUT_DATA     (*(volatile uint8_t *)0x20004027) 	//COMM7
 
-#define A_MARS_SYS_COUNTER      (*(volatile uint8_t *)0x2000402E) 	//COMM14
-#define B_MARS_SYS_COUNTER      (*(volatile uint8_t *)0x2000402F) 	//COMM15
-
 #define MARS_UNCACHED_OFFSET    0x20000000
 
 uint32 address_table[16] = {
@@ -60,8 +57,8 @@ void Mars_Play_Beep_Short(void);
 	} while (0)
 
 void VGMPlay_32X_Sub() {
-	uint8_t a_counter = 0;
-	uint8_t b_counter = 0;
+	uint16_t a_counter = 0;
+	uint16_t b_counter = 0;
 
 	uint8_t pwmReg = 4;
 	uint16_t pwmHighData = 0;
@@ -70,11 +67,9 @@ void VGMPlay_32X_Sub() {
 	
 	for(;;)
 	{
-		uint8_t acnt = A_MARS_SYS_COUNTER;
-		if(a_counter != acnt){
-			a_counter = acnt;
-
-			uint16_t in_data = A_MARS_SYS_IN_DATA;
+		uint16_t in_data = A_MARS_SYS_IN_DATA;
+		if(a_counter != (in_data & 0xC000)){
+			a_counter = in_data & 0xC000;
 
 			uint8_t idx = (in_data >> 8) & 0xF;
 			A_MARS_SYS_OUT_ADDR = address_table[idx];
@@ -94,11 +89,9 @@ void VGMPlay_32X_Sub() {
 					break;
 			}
 		}
-		uint8_t bcnt = B_MARS_SYS_COUNTER;
-		if(b_counter != bcnt){
-			b_counter = bcnt;
-
-			uint16_t in_data = B_MARS_SYS_IN_DATA;
+		in_data = B_MARS_SYS_IN_DATA;
+		if(b_counter != (in_data & 0xC000)){
+			b_counter = in_data & 0xC000;
 
 			uint8_t idx = (in_data >> 8) & 0xF;
 			B_MARS_SYS_OUT_ADDR = address_table[idx];
