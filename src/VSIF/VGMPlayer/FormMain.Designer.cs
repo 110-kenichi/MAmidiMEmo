@@ -5231,7 +5231,7 @@ namespace zanac.VGMPlayer
             this.comboBoxMCD.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.comboBoxMCD.FormattingEnabled = true;
             this.comboBoxMCD.Items.AddRange(new object[] {
-            "VSIF - MD/Genesis CD(FTDI2XX Clk: H=10~)"});
+            "VSIF - MD/Genesis CD(FTDI2XX Clk: H=9~)"});
             this.comboBoxMCD.Location = new System.Drawing.Point(163, 310);
             this.comboBoxMCD.Name = "comboBoxMCD";
             this.comboBoxMCD.Size = new System.Drawing.Size(336, 20);
@@ -6527,7 +6527,7 @@ namespace zanac.VGMPlayer
             this.comboBoxPWM.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.comboBoxPWM.FormattingEnabled = true;
             this.comboBoxPWM.Items.AddRange(new object[] {
-            "VSIF - 32X(FTDI2XX Clk: H=10~)"});
+            "VSIF - 32X(FTDI2XX Clk: H=9~)"});
             this.comboBoxPWM.Location = new System.Drawing.Point(163, 414);
             this.comboBoxPWM.Name = "comboBoxPWM";
             this.comboBoxPWM.Size = new System.Drawing.Size(336, 20);
@@ -6901,7 +6901,7 @@ namespace zanac.VGMPlayer
             this.KeyPreview = true;
             this.MainMenuStrip = this.menuStrip1;
             this.Name = "FormMain";
-            this.Text = "Real chip VGM/XGM/MGS player V2.14 by Itoken";
+            this.Text = "Real chip VGM/XGM/MGS player V2.15 by Itoken";
             this.KeyDown += new System.Windows.Forms.KeyEventHandler(this.FormMain_KeyDown);
             this.menuStrip1.ResumeLayout(false);
             this.menuStrip1.PerformLayout();
