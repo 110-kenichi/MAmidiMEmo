@@ -65,154 +65,67 @@ _Reset_Z80:
 |move.b #0x0f,0xC00011
 |move.b #0x90,0xC00011
 
+| ======================================================================
+| Macro: VGM_32X_BLOCK suf, cnt_op, cnt_reg
+|   suf     : ラベルサフィックス (1/2/3/4)
+|   cnt_op  : カウンタ演算命令   (or.w / eor.w)
+|   cnt_reg : カウンタレジスタ   (%d3 / %d4 / %d5)
+| ======================================================================
+    .macro  VGM_32X_BLOCK suf, cnt_op, cnt_reg
+_VGM_ADDRESS_32X_LOOP_A\suf:
+    btst.b  %d2,(%a0)                   | +8 8  Check CLK
+    beq.b   _VGM_ADDRESS_32X_LOOP_A\suf | +8 16 Wait pullup
+    move.w  (%a0),%d1                   | +8 24 Addr & Hi Data to SH2 (0CDDAAAA -> DDxxxxxx & AAAA)
+    \cnt_op \cnt_reg,%d1                | +4 28 Counter A
+
+    move.l  -0x8(%a2),%a6                     |+16 44 Retrieve address A to FM/PSG
+
+_VGM_DATA_32X_LOOP_A\suf:
+    btst.b  %d2,(%a0)                   | +8 8  Check CLK
+    bne.b   _VGM_DATA_32X_LOOP_A\suf    | +8 16 Wait pulldown
+    move.b  (%a0),%d1                   | +8 24 Pass Lo Data to SH2 (0CDDDDDD -> xxDDDDDD)
+
+    move.b  (%a3),(%a6)                      |+12 36 Write data A to FM/PSG
+
+    move.w  %d1, (%a1)                  | +8 44 Write data to address A to SH2
+
+_VGM_ADDRESS_32X_LOOP_B\suf:
+    btst.b  %d2,(%a0)                   | +8 8  Check CLK
+    beq.b   _VGM_ADDRESS_32X_LOOP_B\suf | +8 16 Wait pullup
+    move.w  (%a0),%d1                   | +8 24 Addr & Hi Data to SH2 (0CDDAAAA -> DDxxxxxx & AAAA)
+
+    move.l  (%a2),%a6                       |+12 36 Retrieve address B to FM/PSG
+    move.b  (%a5),(%a6)                     |+12 48 Write data B to FM/PSG
+
+_VGM_DATA_32X_LOOP_B\suf:
+    btst.b  %d2,(%a0)                   | +8 8  Check CLK
+    bne.b   _VGM_DATA_32X_LOOP_B\suf    | +8 16 Wait pulldown
+    move.b  (%a0),%d1                   | +8 24 Pass Lo Data to SH2 (0CDDDDDD -> xxDDDDDD)
+    \cnt_op \cnt_reg,%d1                | +4 28 Counter B
+
+    move.w  %d1, (%a4)                  | +8 36 Write data to address B to SH2
+
+                                        |+ 8 42 Loop
+    .endm
+
 _VGM_ADDRESS_32X:
-|jmp     (%a7)                       |+ 8 48 Loop
 
-_VGM_ADDRESS_32X_LOOP_A:
-    btst.b  %d2,(%a0)                   | +8 8  Check CLK
-    beq.b   _VGM_ADDRESS_32X_LOOP_A     | +8 16 Wait pullup
-    move.w  (%a0),%d1                   | +8 24 Addr & Hi Data to SH2 (0CDDAAAA -> DDxxxxxx & AAAA)
-    or.w    %d3,%d1                     | +4 28 Counter A 0x1
-
-    move.l  -0x8(%a2),%a6                     |+16 44 Retrieve address A to FM/PSG
-
-_VGM_DATA_32X_LOOP_A:
-    btst.b  %d2,(%a0)                   | +8 8  Check CLK
-    bne.b   _VGM_DATA_32X_LOOP_A        | +8 16 Wait pulldown
-    move.b  (%a0),%d1                   | +8 24 Pass Lo Data to SH2 (0CDDDDDD -> xxDDDDDD)
-
-    move.b  (%a3),(%a6)                      |+12 36 Write data A to FM/PSG
-
-    move.w  %d1, (%a1)                  | +8 44 Write data to address A to SH2
-
-_VGM_ADDRESS_32X_LOOP_B:
-    btst.b  %d2,(%a0)                   | +8 8  Check CLK
-    beq.b   _VGM_ADDRESS_32X_LOOP_B     | +8 16 Wait pullup
-    move.w  (%a0),%d1                   | +8 24 Addr & Hi Data to SH2 (0CDDAAAA -> DDxxxxxx & AAAA)
-
-    move.l  (%a2),%a6                       |+12 36 Retrieve address B to FM/PSG
-    move.b  (%a5),(%a6)                     |+12 48 Write data B to FM/PSG
-
-_VGM_DATA_32X_LOOP_B:
-    btst.b  %d2,(%a0)                   | +8 8  Check CLK
-    bne.b   _VGM_DATA_32X_LOOP_B        | +8 16 Wait pulldown
-    move.b  (%a0),%d1                   | +8 24 Pass Lo Data to SH2 (0CDDDDDD -> xxDDDDDD)
-    or.w    %d3,%d1                     | +4 28 Counter B 0x1
-
-    move.w  %d1, (%a4)                  | +8 36 Write data to address B to SH2
+    VGM_32X_BLOCK 1, or.w,  %d3        | Counter 0x1
 
 |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 
-_VGM_ADDRESS_32X_LOOP_A2:
-    btst.b  %d2,(%a0)                   | +8 8  Check CLK
-    beq.b   _VGM_ADDRESS_32X_LOOP_A2    | +8 16 Wait pullup
-    move.w  (%a0),%d1                   | +8 24 Addr & Hi Data to SH2 (0CDDAAAA -> DDxxxxxx & AAAA)
-    eor.w    %d5,%d1                    | +4 28 Counter A 0x2
-
-    move.l  -0x8(%a2),%a6                     |+16 44 Retrieve address A to FM/PSG
-
-_VGM_DATA_32X_LOOP_A2:
-    btst.b  %d2,(%a0)                   | +8 8  Check CLK
-    bne.b   _VGM_DATA_32X_LOOP_A2       | +8 16 Wait pulldown
-    move.b  (%a0),%d1                   | +8 24 Pass Lo Data to SH2 (0CDDDDDD -> xxDDDDDD)
-
-    move.b  (%a3),(%a6)                      |+12 36 Write data A to FM/PSG
-
-    move.w  %d1, (%a1)                  | +8 44 Write data to address A to SH2
-
-_VGM_ADDRESS_32X_LOOP_B2:
-    btst.b  %d2,(%a0)                   | +8 8  Check CLK
-    beq.b   _VGM_ADDRESS_32X_LOOP_B2    | +8 16 Wait pullup
-    move.w  (%a0),%d1                   | +8 24 Addr & Hi Data to SH2 (0CDDAAAA -> DDxxxxxx & AAAA)
-
-    move.l  (%a2),%a6                       |+12 36 Retrieve address B to FM/PSG
-    move.b  (%a5),(%a6)                     |+12 48 Write data B to FM/PSG
-
-_VGM_DATA_32X_LOOP_B2:
-    btst.b  %d2,(%a0)                   | +8 8  Check CLK
-    bne.b   _VGM_DATA_32X_LOOP_B2       | +8 16 Wait pulldown
-    move.b  (%a0),%d1                   | +8 24 Pass Lo Data to SH2 (0CDDDDDD -> xxDDDDDD)
-    eor.w   %d5,%d1                     | +4 28 Counter B 0x2
-
-    move.w  %d1, (%a4)                  | +8 36 Write data to address B to SH2
+    VGM_32X_BLOCK 2, eor.w, %d5        | Counter 0x2
 
 |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 
-_VGM_ADDRESS_32X_LOOP_A3:
-    btst.b  %d2,(%a0)                   | +8 8  Check CLK
-    beq.b   _VGM_ADDRESS_32X_LOOP_A3    | +8 16 Wait pullup
-    move.w  (%a0),%d1                   | +8 24 Addr & Hi Data to SH2 (0CDDAAAA -> DDxxxxxx & AAAA)
-    or.w    %d4,%d1                     | +4 28 Counter A 0x3
-
-    move.l  -0x8(%a2),%a6                     |+16 44 Retrieve address A to FM/PSG
-
-_VGM_DATA_32X_LOOP_A3:
-    btst.b  %d2,(%a0)                   | +8 8  Check CLK
-    bne.b   _VGM_DATA_32X_LOOP_A3       | +8 16 Wait pulldown
-    move.b  (%a0),%d1                   | +8 24 Pass Lo Data to SH2 (0CDDDDDD -> xxDDDDDD)
-
-    move.b  (%a3),(%a6)                      |+12 36 Write data A to FM/PSG
-
-    move.w  %d1, (%a1)                  | +8 44 Write data to address A to SH2
-
-_VGM_ADDRESS_32X_LOOP_B3:
-    btst.b  %d2,(%a0)                   | +8 8  Check CLK
-    beq.b   _VGM_ADDRESS_32X_LOOP_B3    | +8 16 Wait pullup
-    move.w  (%a0),%d1                   | +8 24 Addr & Hi Data to SH2 (0CDDAAAA -> DDxxxxxx & AAAA)
-
-    move.l  (%a2),%a6                       |+12 36 Retrieve address B to FM/PSG
-    move.b  (%a5),(%a6)                     |+12 48 Write data B to FM/PSG
-
-_VGM_DATA_32X_LOOP_B3:
-    btst.b  %d2,(%a0)                   | +8 8  Check CLK
-    bne.b   _VGM_DATA_32X_LOOP_B3       | +8 16 Wait pulldown
-    move.b  (%a0),%d1                   | +8 24 Pass Lo Data to SH2 (0CDDDDDD -> xxDDDDDD)
-    or.w    %d4,%d1                     | +4 28 Counter B 0x3
-
-    move.w  %d1, (%a4)                  | +8 36 Write data to address B to SH2
+    VGM_32X_BLOCK 3, or.w,  %d4        | Counter 0x3
 
 |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 
-_VGM_ADDRESS_32X_LOOP_A4:
-    btst.b  %d2,(%a0)                   | +8 8  Check CLK
-    beq.b   _VGM_ADDRESS_32X_LOOP_A4    | +8 16 Wait pullup
-    move.w  (%a0),%d1                   | +8 24 Addr & Hi Data to SH2 (0CDDAAAA -> DDxxxxxx & AAAA)
-    eor.w    %d3,%d1                    | +4 28 Counter A 0x0
-
-    move.l  -0x8(%a2),%a6                     |+16 44 Retrieve address A to FM/PSG
-
-_VGM_DATA_32X_LOOP_A4:
-    btst.b  %d2,(%a0)                   | +8 8  Check CLK
-    bne.b   _VGM_DATA_32X_LOOP_A4       | +8 16 Wait pulldown
-    move.b  (%a0),%d1                   | +8 24 Pass Lo Data to SH2 (0CDDDDDD -> xxDDDDDD)
-
-    move.b  (%a3),(%a6)                      |+12 36 Write data A to FM/PSG
-
-    move.w  %d1, (%a1)                  | +8 44 Write data to address A to SH2
-
-_VGM_ADDRESS_32X_LOOP_B4:
-    btst.b  %d2,(%a0)                   | +8 8  Check CLK
-    beq.b   _VGM_ADDRESS_32X_LOOP_B4    | +8 16 Wait pullup
-    move.w  (%a0),%d1                   | +8 24 Addr & Hi Data to SH2 (0CDDAAAA -> DDxxxxxx & AAAA)
-
-    move.l  (%a2),%a6                       |+12 36 Retrieve address B to FM/PSG
-    move.b  (%a5),(%a6)                     |+12 48 Write data B to FM/PSG
-
-_VGM_DATA_32X_LOOP_B4:
-    btst.b  %d2,(%a0)                   | +8 8  Check CLK
-    bne.b   _VGM_DATA_32X_LOOP_B4       | +8 16 Wait pulldown
-    move.b  (%a0),%d1                   | +8 24 Pass Lo Data to SH2 (0CDDDDDD -> xxDDDDDD)
-    eor.w    %d3,%d1                    | +4 28 Counter B 0x0
-
-    move.w  %d1, (%a4)                  | +8 36 Write data to address B to SH2
+    VGM_32X_BLOCK 4, eor.w, %d3        | Counter 0x0
 
 |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
     jmp     (%a7)                       |+ 8 42 Loop
-
-|move.l #0xC00011, %a6
-|move.b #0x80,(%a6)
-|move.b #0x0f,(%a6)
-|move.b #0x90,(%a6)
 
 |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 
