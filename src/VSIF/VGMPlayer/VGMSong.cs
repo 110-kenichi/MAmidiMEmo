@@ -6218,7 +6218,7 @@ namespace zanac.VGMPlayer
                                 //8bit +DELTA PCM
                                 comPortPWM.DeferredWriteData(0, (byte)((11 + (idx - 2)) << 2), (byte)diff, f_ftdiClkWidth);
                             }
-                            else if (-0xff <= diff && diff <= 0 && idx == 3)
+                            else if (-0xff <= diff && diff <= 0)
                             {
                                 //8bit -DELTA PCM
                                 comPortPWM.DeferredWriteData(0, (byte)((13 + (idx - 2)) << 2), (byte)(-diff), f_ftdiClkWidth);
