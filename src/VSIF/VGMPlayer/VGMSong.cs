@@ -6209,11 +6209,48 @@ namespace zanac.VGMPlayer
                         pwmdt = (lastPwmCycle - 1);
                     if (lastPwmWriteDacData[idx] != pwmdt)
                     {
-                        comPortPWM.DeferredWriteData(
-                            new byte[] { 0, 0 },
-                            new byte[] { 6 << 2, 7 << 2 },
-                            new byte[] { (byte)((addressAndData & 0xf0) | ((pwmdt >> 8) & 0xf)), (byte)(pwmdt & 0xff) },
-                            f_ftdiClkWidth);
+                        var diff = pwmdt - lastPwmWriteDacData[idx];
+                        if (idx != 4)
+                        {
+                            //LR
+                            if (0 <= diff && diff <= 0xff)
+                            {
+                                //8bit +DELTA PCM
+                                comPortPWM.DeferredWriteData(0, (byte)((11 + (idx - 2)) << 2), (byte)diff, f_ftdiClkWidth);
+                            }
+                            else if (-0xff <= diff && diff <= 0 && idx == 3)
+                            {
+                                //8bit -DELTA PCM
+                                comPortPWM.DeferredWriteData(0, (byte)((13 + (idx - 2)) << 2), (byte)(-diff), f_ftdiClkWidth);
+                            }
+                            else
+                            {
+                                //12bit RAW PCM
+                                comPortPWM.DeferredWriteData(
+                                    new byte[] { 0, 0 },
+                                    new byte[] { 6 << 2, 7 << 2 },
+                                    new byte[] { (byte)((addressAndData & 0xf0) | ((pwmdt >> 8) & 0xf)), (byte)(pwmdt & 0xff) },
+                                    f_ftdiClkWidth);
+                            }
+                        }
+                        else
+                        {
+                            //MONO
+                            if (Math.Abs(diff) <= 127)
+                            {
+                                //8bit DELTA PCM
+                                comPortPWM.DeferredWriteData(0, (byte)(15 << 2), (byte)diff, f_ftdiClkWidth);
+                            }
+                            else
+                            {
+                                //12bit RAW PCM
+                                comPortPWM.DeferredWriteData(
+                                    new byte[] { 0, 0 },
+                                    new byte[] { 6 << 2, 7 << 2 },
+                                    new byte[] { (byte)((addressAndData & 0xf0) | ((pwmdt >> 8) & 0xf)), (byte)(pwmdt & 0xff) },
+                                    f_ftdiClkWidth);
+                            }
+                        }
                         lastPwmWriteDacData[idx] = pwmdt;
                     }
                     lastPwmDacData[idx] = 0;

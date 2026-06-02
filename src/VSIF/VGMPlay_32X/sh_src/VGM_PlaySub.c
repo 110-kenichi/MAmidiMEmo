@@ -24,13 +24,16 @@ uint32 address_table[16] = {
 		0xA12010, // COMM CMD ADRS HI(68 -> CD)
 		0xA12011, // COMM CMD ADRS LO(68 -> CD)
 		0xA12012, // COMM CMD DATA (68 -> CD)
-		0xFF1000, // Dummy
-		0xFF1000, // Dummy
-		0xFF1000, // Dummy
-		0xFF1000, // Dummy
-		0xFF1000, // Dummy
+		0xFF1000, // PWM L +Diff
+		0xFF1000, // PWM R +Diff
+		0xFF1000, // PWM L -Diff
+		0xFF1000, // PWM R -Diff
+		0xFF1000, // PWM Mono +-Diff
 	};
 
+static uint16_t prev_val[5] = {
+	0, 0, 0, 0, 0
+};
 volatile uint8_t g_pwmWriteHead = 0;
 volatile uint8_t g_pwmWriteTail = 0;
 volatile uint16_t g_pwmWriteEntries[256];
@@ -54,6 +57,7 @@ void Mars_Play_Beep_Short(void);
 		PWM_WRITE_ENTRIES[pwmWriteHead] = PWM_QUEUE_ENTRY(pwmReg, (sample)); \
 		pwmWriteHead = next; \
 		PWM_WRITE_HEAD = pwmWriteHead; \
+		prev_val[pwmReg] = (sample); \
 	} while (0)
 
 void VGMPlay_32X_Sub() {
@@ -83,6 +87,26 @@ void VGMPlay_32X_Sub() {
 				case 7:
 					PWM_ENQUEUE(pwmHighData | (uint16_t)currentData);
 					break;
+				case 11:	// PWM L +Diff
+					pwmReg = 2;
+					PWM_ENQUEUE(prev_val[pwmReg] + currentData);
+					break;
+				case 12:	// PWM R +Diff
+					pwmReg = 3;
+					PWM_ENQUEUE(prev_val[pwmReg] + currentData);
+					break;
+				case 13:	// PWM L -Diff
+					pwmReg = 2;
+					PWM_ENQUEUE(prev_val[pwmReg] - currentData);
+					break;
+				case 14:	// PWM R -Diff
+					pwmReg = 3;
+					PWM_ENQUEUE(prev_val[pwmReg] - currentData);
+					break;
+				case 15:	// PWM Mono Diff
+					pwmReg = 4;
+					PWM_ENQUEUE(prev_val[pwmReg] + (int8_t)currentData);
+					break;
 				default:
 					// No PWM command
 					A_MARS_SYS_OUT_DATA = (uint8_t)currentData;
@@ -104,6 +128,26 @@ void VGMPlay_32X_Sub() {
 					break;
 				case 7:
 					PWM_ENQUEUE(pwmHighData | (uint16_t)currentData);
+					break;
+				case 11:	// PWM L +Diff
+					pwmReg = 2;
+					PWM_ENQUEUE(prev_val[pwmReg] + currentData);
+					break;
+				case 12:	// PWM R +Diff
+					pwmReg = 3;
+					PWM_ENQUEUE(prev_val[pwmReg] + currentData);
+					break;
+				case 13:	// PWM L -Diff
+					pwmReg = 2;
+					PWM_ENQUEUE(prev_val[pwmReg] - currentData);
+					break;
+				case 14:	// PWM R -Diff
+					pwmReg = 3;
+					PWM_ENQUEUE(prev_val[pwmReg] - currentData);
+					break;
+				case 15:	// PWM Mono Diff
+					pwmReg = 4;
+					PWM_ENQUEUE(prev_val[pwmReg] + (int8_t)currentData);
 					break;
 				default:
 					// No PWM command

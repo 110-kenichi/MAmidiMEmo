@@ -15,9 +15,9 @@ extern volatile uint16_t g_pwmWriteEntries[256];
 static volatile uint16_t *const pwm_regs[5] = {
 	(volatile uint16_t *)0x20004030,
 	(volatile uint16_t *)0x20004032,
-	(volatile uint16_t *)0x20004034,
-	(volatile uint16_t *)0x20004036,
-	(volatile uint16_t *)0x20004038,
+	(volatile uint16_t *)0x20004034,    // PWM L
+	(volatile uint16_t *)0x20004036,    // PWM R
+	(volatile uint16_t *)0x20004038,    // PWM Mono
 };
 
 
