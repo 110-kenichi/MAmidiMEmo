@@ -490,7 +490,7 @@ namespace zanac.VGMPlayer
             //PWM
             if (comPortPWM != null)
             {
-                DeferredWritePWMReg(0, 0);
+                //DeferredWritePWMReg(0, 0); No need to write 0 to all registers to avoid popping sound.
             }
 
             flushDeferredWriteDataAndWait();
@@ -1137,6 +1137,8 @@ namespace zanac.VGMPlayer
                         {
                             comPortPWM = VsifManager.TryToConnectVSIF(VsifSoundModuleType.Genesis_FTDI,
                                 (PortId)Program.Default.PWM_Port);
+                            //HACK: Init Pan
+                            DeferredWritePWMReg(0x00, 0x05);
                             if (comPortPWM != null)
                             {
                                 comPortPWM.ChipClockHz["PWM"] = 23011361;
@@ -1149,10 +1151,6 @@ namespace zanac.VGMPlayer
                 if (comPortPWM != null)
                 {
                     Accepted = true;
-
-                    //HACK: Init Pan
-                    DeferredWritePWMReg(0x01, 0x05);
-
                     return true;
                 }
             }

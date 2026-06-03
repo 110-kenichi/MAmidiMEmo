@@ -1568,7 +1568,7 @@ namespace zanac.VGMPlayer
             this.comboBoxDCSG.FormattingEnabled = true;
             this.comboBoxDCSG.Items.AddRange(new object[] {
             "VSIF - MD/Genesis(UART 163Kbps)",
-            "VSIF - MD/Genesis(FTDI2XX Clk: 232R=8~,H=9~)",
+            "VSIF - MD/Genesis(FTDI2XX Clk: 232R=8~,H=9~,32X=8~)",
             "VSIF - SMS(UART 115Kbps)",
             "VSIF - MD/Genesis(UART 115Kbps)",
             "VSIF - MSX(FTDI2XX Clk: 232R=25~,H=32~)",
@@ -2564,7 +2564,7 @@ namespace zanac.VGMPlayer
             this.comboBoxOPN2.FormattingEnabled = true;
             this.comboBoxOPN2.Items.AddRange(new object[] {
             "VSIF - MD/Genesis(UART 163Kbps)",
-            "VSIF - MD/Genesis(FTDI2XX Clk: 232R=8~,H=9~)",
+            "VSIF - MD/Genesis(FTDI2XX Clk: 232R=8~,H=9~,32X=8~)",
             "VSIF - MD/Genesis(UART 115Kbps)",
             "VSIF - MSX/PC-6001(FTDI2XX Clk: 232R=25~,H=32~)",
             "VSIF - turboR(FTDI2XX Clk: 232R=8~,H=9~)",
@@ -5231,7 +5231,7 @@ namespace zanac.VGMPlayer
             this.comboBoxMCD.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.comboBoxMCD.FormattingEnabled = true;
             this.comboBoxMCD.Items.AddRange(new object[] {
-            "VSIF - MD/Genesis CD(FTDI2XX Clk: H=9~)"});
+            "VSIF - MD/Genesis CD(FTDI2XX Clk: H=9~,32X=8~)"});
             this.comboBoxMCD.Location = new System.Drawing.Point(163, 310);
             this.comboBoxMCD.Name = "comboBoxMCD";
             this.comboBoxMCD.Size = new System.Drawing.Size(336, 20);
@@ -6527,7 +6527,7 @@ namespace zanac.VGMPlayer
             this.comboBoxPWM.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.comboBoxPWM.FormattingEnabled = true;
             this.comboBoxPWM.Items.AddRange(new object[] {
-            "VSIF - 32X(FTDI2XX Clk: H=9~)"});
+            "VSIF - 32X(FTDI2XX Clk: H=8~)"});
             this.comboBoxPWM.Location = new System.Drawing.Point(163, 414);
             this.comboBoxPWM.Name = "comboBoxPWM";
             this.comboBoxPWM.Size = new System.Drawing.Size(336, 20);
@@ -6901,7 +6901,7 @@ namespace zanac.VGMPlayer
             this.KeyPreview = true;
             this.MainMenuStrip = this.menuStrip1;
             this.Name = "FormMain";
-            this.Text = "Real chip VGM/XGM/MGS player V2.18 by Itoken";
+            this.Text = "Real chip VGM/XGM/MGS player V2.19 by Itoken";
             this.KeyDown += new System.Windows.Forms.KeyEventHandler(this.FormMain_KeyDown);
             this.menuStrip1.ResumeLayout(false);
             this.menuStrip1.PerformLayout();

@@ -31,29 +31,31 @@ _Reset_Z80:
 
     move.l  #PERIPHERAL_PORT_P2_B, %a0 | PORT2 Address
     move.b  #6,%d2                     | for Check Bit 6
+    
     |https://segaretro.org/Sega_Mega_Drive/Control_pad_inputs
     move.b  #0x00,0xA1000B  | Set all read
 
     move.l  #MARS_COMM0, %a1           | Send Data A (68 -> SH2) 
-    move.w  #0x40,(%a1)
-    move.l  #MARS_COMM10,%a2           | Get Addr A (SH2 -> 68) Long 
-    move.l  #0xFF1000,-0x8(%a2)
-    move.l  #MARS_COMM6, %a3           | Get Data A (SH2 -> 68)
-    move.w  #0,(%a3)
+    move.w  #0x0000,(%a1)
+    move.l  #MARS_COMM2,%a2            | Get Addr A (SH2 -> 68) Long 
+    move.l  #0xFF1000,(%a2)
+                                       | Get Data A (SH2 -> 68)
+    move.b  #0x00,0x2(%a2)
 
     move.l  #MARS_COMM8, %a4           | Send Data B (68 -> SH2) 
-    move.w  #0x40,(%a4)
-    move.l  #0xFF1000,(%a2)
+    move.w  #0x0000,(%a4)
+    move.l  #MARS_COMM10,%a3           | Get Addr B (SH2 -> 68) Long 
+    move.l  #0xFF1000,(%a3)
+    move.l  #MARS_COMM7, %a5           | Get Data B (SH2 -> 68) 
+    move.b  #0x00,(%a5)
 
     move.l  #0xFF1000, %a6             | Dummy Address for SH2 to write
     move.b  #0x00, (%a6) 
+
     move.l  #_VGM_ADDRESS_32X, %a7     | Jmp Address
 
-    move.l  #MARS_COMM7, %a5           | Get Addr B (SH2 -> 68) Long 
-
-    move.w  #0x4000,%d3                     | Counter 1
-    move.w  #0x8000,%d4                     | Counter 2
-    move.w  #0xC000,%d5                     | Counter 3
+    move.w  #0x0000,%d1                     | VSIF Data A
+    move.w  #0x0000,%d3                     | VSIF Data B
 
 |move.l  #0xFF1002, %a0 | PORT2 Address
 |move.b  #0x40,(%a0) | Set Bit 6 to indicate ready to SH2
@@ -66,65 +68,50 @@ _Reset_Z80:
 |move.b #0x90,0xC00011
 
 | ======================================================================
-| Macro: VGM_32X_BLOCK suf, cnt_op, cnt_reg
-|   suf     : ラベルサフィックス (1/2/3/4)
-|   cnt_op  : カウンタ演算命令   (or.w / eor.w)
-|   cnt_reg : カウンタレジスタ   (%d3 / %d4 / %d5)
+| Macro: VGM_32X_BLOCK suf
 | ======================================================================
-    .macro  VGM_32X_BLOCK suf, cnt_op, cnt_reg
+    .macro  VGM_32X_BLOCK suf
 _VGM_ADDRESS_32X_LOOP_A\suf:
     btst.b  %d2,(%a0)                   | +8 8  Check CLK
     beq.b   _VGM_ADDRESS_32X_LOOP_A\suf | +8 16 Wait pullup
-    move.w  (%a0),%d1                   | +8 24 Addr & Hi Data to SH2 (0CDDAAAA -> DDxxxxxx & AAAA)
-    \cnt_op \cnt_reg,%d1                | +4 28 Counter A
+    move.w  (%a0),%d1                   | +8 24 (A) VSIF Addr & Hi Data to SH2 (0CDDAAAA -> DDxxxxxx & AAAA)
 
-    move.l  -0x8(%a2),%a6                     |+16 44 Retrieve address A to FM/PSG
+    move.w  %d3, (%a4)                      | +8 32 (B) Write VSIF 16bit data B to SH2
+
+    move.l  (%a2),%a6                           |+12 44 (A) Get FM/PSG address
 
 _VGM_DATA_32X_LOOP_A\suf:
     btst.b  %d2,(%a0)                   | +8 8  Check CLK
     bne.b   _VGM_DATA_32X_LOOP_A\suf    | +8 16 Wait pulldown
-    move.b  (%a0),%d1                   | +8 24 Pass Lo Data to SH2 (0CDDDDDD -> xxDDDDDD)
+    move.b  (%a0),%d1                   | +8 24 (A) Lo Data to SH2 (0CDDDDDD -> xxDDDDDD)
 
-    move.b  (%a3),(%a6)                      |+12 36 Write data A to FM/PSG
-
-    move.w  %d1, (%a1)                  | +8 44 Write data to address A to SH2
+    move.b  4(%a2),(%a6)                        |+16 40 (A) Write FM/PSG data
 
 _VGM_ADDRESS_32X_LOOP_B\suf:
     btst.b  %d2,(%a0)                   | +8 8  Check CLK
     beq.b   _VGM_ADDRESS_32X_LOOP_B\suf | +8 16 Wait pullup
-    move.w  (%a0),%d1                   | +8 24 Addr & Hi Data to SH2 (0CDDAAAA -> DDxxxxxx & AAAA)
+    move.w  (%a0),%d3                   | +8 24 (B) VSIF Addr & Hi Data to SH2 (0CDDAAAA -> DDxxxxxx & AAAA)
 
-    move.l  (%a2),%a6                       |+12 36 Retrieve address B to FM/PSG
-    move.b  (%a5),(%a6)                     |+12 48 Write data B to FM/PSG
+    move.w  %d1, (%a1)                      | +8 32 (A) Write VSIF 16bit data A to SH2
+
+    move.l  (%a3),%a6                           |+12 44 (B) Get FM/PSG address
 
 _VGM_DATA_32X_LOOP_B\suf:
     btst.b  %d2,(%a0)                   | +8 8  Check CLK
     bne.b   _VGM_DATA_32X_LOOP_B\suf    | +8 16 Wait pulldown
-    move.b  (%a0),%d1                   | +8 24 Pass Lo Data to SH2 (0CDDDDDD -> xxDDDDDD)
-    \cnt_op \cnt_reg,%d1                | +4 28 Counter B
+    move.b  (%a0),%d3                   | +8 24 (B) VSIF Lo Data to SH2 (0CDDDDDD -> xxDDDDDD)
 
-    move.w  %d1, (%a4)                  | +8 36 Write data to address B to SH2
+    move.b  (%a5),(%a6)                         |+12 36 (B) Write FM/PSG data
 
-                                        |+ 8 42 Loop
+                                        |+ 8 44 Loop
     .endm
 
 _VGM_ADDRESS_32X:
 
-    VGM_32X_BLOCK 1, or.w,  %d3        | Counter 0x1
+    VGM_32X_BLOCK 1
 
 |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 
-    VGM_32X_BLOCK 2, eor.w, %d5        | Counter 0x2
-
-|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
-
-    VGM_32X_BLOCK 3, or.w,  %d4        | Counter 0x3
-
-|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
-
-    VGM_32X_BLOCK 4, eor.w, %d3        | Counter 0x0
-
-|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
     jmp     (%a7)                       |+ 8 42 Loop
 
 |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■

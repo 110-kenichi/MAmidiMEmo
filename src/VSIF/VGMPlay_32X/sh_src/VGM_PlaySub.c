@@ -61,9 +61,6 @@ void Mars_Play_Beep_Short(void);
 	} while (0)
 
 void VGMPlay_32X_Sub() {
-	uint16_t a_counter = 0;
-	uint16_t b_counter = 0;
-
 	uint8_t pwmReg = 4;
 	uint16_t pwmHighData = 0;
 	uint8_t pwmWriteHead = PWM_WRITE_HEAD;
@@ -71,9 +68,10 @@ void VGMPlay_32X_Sub() {
 	
 	for(;;)
 	{
-		uint16_t in_data = A_MARS_SYS_IN_DATA;
-		if(a_counter != (in_data & 0xC000)){
-			a_counter = in_data & 0xC000;
+        uint16_t in_data = A_MARS_SYS_IN_DATA;
+		if(in_data != 0 && in_data == A_MARS_SYS_IN_DATA) // Check if there's new data in A_MARS_SYS_IN_DATA
+		{
+			A_MARS_SYS_IN_DATA = 0; // Clear the data after reading to prevent reprocessing the same command
 
 			uint8_t idx = (in_data >> 8) & 0xF;
 			A_MARS_SYS_OUT_ADDR = address_table[idx];
@@ -113,9 +111,11 @@ void VGMPlay_32X_Sub() {
 					break;
 			}
 		}
+		
 		in_data = B_MARS_SYS_IN_DATA;
-		if(b_counter != (in_data & 0xC000)){
-			b_counter = in_data & 0xC000;
+		if(in_data != 0 && in_data == B_MARS_SYS_IN_DATA) // Check if there's new data in B_MARS_SYS_IN_DATA
+		{
+			B_MARS_SYS_IN_DATA = 0; // Clear the data after reading to prevent reprocessing the same command
 
 			uint8_t idx = (in_data >> 8) & 0xF;
 			B_MARS_SYS_OUT_ADDR = address_table[idx];
