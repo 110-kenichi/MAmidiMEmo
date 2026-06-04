@@ -493,7 +493,7 @@ namespace zanac.VGMPlayer
                 //DeferredWritePWMReg(0, 0); No need to write 0 to all registers to avoid popping sound.
             }
 
-            flushDeferredWriteDataAndWait();
+            FlushDeferredWriteDataAndWait();
             Thread.Sleep(250);
         }
 
@@ -4245,7 +4245,7 @@ namespace zanac.VGMPlayer
                                     case 0x66:
                                         //End of song
                                         writeVgmLogFile(true, 0x66);
-                                        flushDeferredWriteData();
+                                        FlushDeferredWriteData();
                                         if (!LoopByCount && !LoopByElapsed)
                                         {
                                             vgmReader.BaseStream?.Seek(0, SeekOrigin.Begin);
@@ -4431,6 +4431,8 @@ namespace zanac.VGMPlayer
                                                                 compRaw, compType, compSubType,
                                                                 bitsDecomp, bitsComp, compAddend, uncompSize);
 
+                                                            //File.WriteAllBytes("decompressed_" + dtype.ToString("x") + ".bin", decompressed);
+
                                                             // 展開後のデータタイプ (dtype - 0x40) に応じて処理を分岐
                                                             int uncompDtype = dtype - 0x40;
                                                             switch (uncompDtype)
@@ -4567,7 +4569,7 @@ namespace zanac.VGMPlayer
                                                                 (saddr).ToString("x") + " - " + ((saddr + size - 1)).ToString("x") +
                                                                 " (" + size.ToString("x") + ")");
 #endif
-                                                            flushDeferredWriteData();
+                                                            FlushDeferredWriteData();
                                                         }
                                                         break;
                                                     case 0x82:  //YM2610 ADPCM A ROM data
@@ -4664,7 +4666,7 @@ namespace zanac.VGMPlayer
                                                                 (saddr).ToString("x") + " - " + ((saddr + size - 1)).ToString("x") +
                                                                 " (" + size.ToString("x") + ")");
 #endif
-                                                            flushDeferredWriteData();
+                                                            FlushDeferredWriteData();
                                                         }
                                                         break;
                                                     case 0x8b: //OKIM6295
@@ -5240,6 +5242,7 @@ namespace zanac.VGMPlayer
                                             {
                                                 if (((adrs & 0xf0) == 0x00) && (dt & 0x0f) == 0x00) //HACK: skip control reg0 MUTE
                                                     break;
+
                                                 DeferredWritePWMReg(adrs, (byte)dt);
                                             }
                                             break;
@@ -5608,7 +5611,7 @@ namespace zanac.VGMPlayer
                             }
                             if ((command == 0x66 || command == -1))
                             {
-                                flushDeferredWriteData();
+                                FlushDeferredWriteData();
                                 if ((!LoopByCount || (LoopByCount && LoopedCount >= 0 && CurrentLoopedCount >= LoopedCount))
                                     && !LoopByElapsed)
                                 {
@@ -5626,7 +5629,7 @@ namespace zanac.VGMPlayer
                         else if (ex.GetType() == typeof(SystemException))
                             throw;
 
-                        flushDeferredWriteData();
+                        FlushDeferredWriteData();
                         if ((!LoopByCount || (LoopByCount && LoopedCount >= 0 && CurrentLoopedCount >= LoopedCount))
                             && !LoopByElapsed)
                         {
@@ -5672,7 +5675,7 @@ namespace zanac.VGMPlayer
 
                     //while (!IsDeferredDataFlushed()) ;
 
-                    flushDeferredWriteData();
+                    FlushDeferredWriteData();
 
                     double pwait = wait / PlaybackSpeed;
                     //if (vgmHead.lngRate > 0)
@@ -5687,7 +5690,7 @@ namespace zanac.VGMPlayer
                             case 0: //Accurate
                                 break;
                             case 1: //Wait
-                                flushDeferredWriteDataAndWait();
+                                FlushDeferredWriteDataAndWait();
                                 QueryPerformanceCounter(out after);
                                 nextTime = after;
                                 break;
@@ -6203,8 +6206,10 @@ namespace zanac.VGMPlayer
                     lastPwmDacData[idx] /= lastPwmDacCount[idx];
 
                     pwmdt = lastPwmDacData[idx];
-                    if (pwmdt >= lastPwmCycle)
-                        pwmdt = (lastPwmCycle - 1);
+                    // HACK: PWM DACの値がPWM周期を超えると音が途切れるため、PWM周期-1を上限とする
+                    //if (pwmdt >= lastPwmCycle)
+                    //pwmdt = (lastPwmCycle - 1);
+
                     if (lastPwmWriteDacData[idx] != pwmdt)
                     {
                         var diff = pwmdt - lastPwmWriteDacData[idx];
@@ -7245,7 +7250,7 @@ namespace zanac.VGMPlayer
         /// <summary>
         /// 
         /// </summary>
-        private void flushDeferredWriteData()
+        internal void FlushDeferredWriteData()
         {
             comPortDCSG?.FlushDeferredWriteData();
             comPortOPLL?.FlushDeferredWriteData();
@@ -7268,7 +7273,7 @@ namespace zanac.VGMPlayer
         /// <summary>
         /// 
         /// </summary>
-        private void flushDeferredWriteDataAndWait()
+        internal void FlushDeferredWriteDataAndWait()
         {
             comPortDCSG?.FlushDeferredWriteDataAndWait();
             comPortOPLL?.FlushDeferredWriteDataAndWait();

@@ -4,13 +4,13 @@
 #define MARS_PWM_FIFO_FULL 0x8000
 #define MARS_UNCACHED_OFFSET 0x20000000
 
-extern volatile uint16_t g_pwmWriteHead;
-extern volatile uint16_t g_pwmWriteTail;
-extern volatile uint16_t g_pwmWriteEntries[1024];
+extern volatile uint8_t g_pwmWriteHead[5];
+extern volatile uint8_t g_pwmWriteTail[5];
+extern volatile uint16_t g_pwmWriteEntries[5][256];
 
-#define PWM_WRITE_HEAD (*(volatile uint16_t *)((uint32_t)&g_pwmWriteHead + MARS_UNCACHED_OFFSET))
-#define PWM_WRITE_TAIL (*(volatile uint16_t *)((uint32_t)&g_pwmWriteTail + MARS_UNCACHED_OFFSET))
-#define PWM_WRITE_ENTRIES ((volatile uint16_t *)((uint32_t)&g_pwmWriteEntries[0] + MARS_UNCACHED_OFFSET))
+#define PWM_WRITE_HEAD_N(n) (*(volatile uint8_t *)((uint32_t)&g_pwmWriteHead[n] + MARS_UNCACHED_OFFSET))
+#define PWM_WRITE_TAIL_N(n) (*(volatile uint8_t *)((uint32_t)&g_pwmWriteTail[n] + MARS_UNCACHED_OFFSET))
+#define PWM_WRITE_ENTRIES_N(n) ((volatile uint16_t *)((uint32_t)&g_pwmWriteEntries[n][0] + MARS_UNCACHED_OFFSET))
 
 static volatile uint16_t *const pwm_regs[5] = {
 	(volatile uint16_t *)0x20004030,
@@ -66,7 +66,10 @@ void Mars_Play_Beep_Short_Slave(void) {
 
 
 void s_main(void) {
-    uint16_t pwmTail = PWM_WRITE_TAIL;
+	uint8_t pwmTail[5] = {
+		PWM_WRITE_TAIL_N(0), PWM_WRITE_TAIL_N(1), PWM_WRITE_TAIL_N(2),
+		PWM_WRITE_TAIL_N(3), PWM_WRITE_TAIL_N(4)
+	};
 
 	while (MARS_SYS_INT_CTRL & 0x8000) {}
 	
@@ -81,16 +84,25 @@ void s_main(void) {
 	//Mars_Play_Beep_Short_Slave();
 
 	for(;;) {
-        uint16_t pwmHead = PWM_WRITE_HEAD;
-		if (pwmTail != pwmHead) {
-            uint16_t pwmEntry = PWM_WRITE_ENTRIES[pwmTail];
-            uint8_t pwmReg = (uint8_t)((pwmEntry >> 12) & 0x07);
-            uint16_t pwmData = pwmEntry & 0x0FFF;
-			pwmTail = (uint16_t)((pwmTail + 1) & 0x03FF);
-            PWM_WRITE_TAIL = pwmTail;
-
-			while (*pwm_regs[pwmReg] & MARS_PWM_FIFO_FULL) {}
-			*pwm_regs[pwmReg] = pwmData;
+		for (uint8_t reg = 0; reg < 5; reg++) {
+			uint8_t pwmHead = PWM_WRITE_HEAD_N(reg);
+			if (pwmTail[reg] != pwmHead) {
+				uint16_t pwmData = PWM_WRITE_ENTRIES_N(reg)[pwmTail[reg]];
+				pwmTail[reg] = (uint8_t)(pwmTail[reg] + 1);
+				PWM_WRITE_TAIL_N(reg) = pwmTail[reg];
+				switch (reg) {
+					case 0:
+						MARS_PWM_CTRL = pwmData;
+						break;
+					case 1:
+						MARS_PWM_CYCLE = pwmData;
+						break;
+					default:
+						while (*pwm_regs[reg] & MARS_PWM_FIFO_FULL) {}
+						*pwm_regs[reg] = pwmData;
+						break;
+				}
+			}
 		}
 	}
 }

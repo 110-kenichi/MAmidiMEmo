@@ -34,37 +34,41 @@ uint32 address_table[16] = {
 static uint16_t prev_val[5] = {
 	0, 0, 0, 0, 0
 };
-volatile uint16_t g_pwmWriteHead = 0;
-volatile uint16_t g_pwmWriteTail = 0;
-volatile uint16_t g_pwmWriteEntries[1024];
+volatile uint8_t g_pwmWriteHead[5] = {0, 0, 0, 0, 0};
+volatile uint8_t g_pwmWriteTail[5] = {0, 0, 0, 0, 0};
+volatile uint16_t g_pwmWriteEntries[5][256];
 
-#define PWM_WRITE_HEAD (*(volatile uint16_t *)((uint32_t)&g_pwmWriteHead + MARS_UNCACHED_OFFSET))
-#define PWM_WRITE_TAIL (*(volatile uint16_t *)((uint32_t)&g_pwmWriteTail + MARS_UNCACHED_OFFSET))
-#define PWM_WRITE_ENTRIES ((volatile uint16_t *)((uint32_t)&g_pwmWriteEntries[0] + MARS_UNCACHED_OFFSET))
-
-#define PWM_QUEUE_ENTRY(reg, data) (uint16_t)((((uint16_t)(reg)) << 12) | ((uint16_t)(data) & 0x0FFF))
+#define PWM_WRITE_HEAD_N(n) (*(volatile uint8_t *)((uint32_t)&g_pwmWriteHead[n] + MARS_UNCACHED_OFFSET))
+#define PWM_WRITE_TAIL_N(n) (*(volatile uint8_t *)((uint32_t)&g_pwmWriteTail[n] + MARS_UNCACHED_OFFSET))
+#define PWM_WRITE_ENTRIES_N(n) ((volatile uint16_t *)((uint32_t)&g_pwmWriteEntries[n][0] + MARS_UNCACHED_OFFSET))
 
 void Mars_Play_Beep_Short(void);
 
 #define PWM_ENQUEUE(sample) \
 	do { \
-		uint16_t next = (uint16_t)((pwmWriteHead + 1) & 0x03FF); \
-		if (next == pwmWriteTail) { \
-			pwmWriteTail = PWM_WRITE_TAIL; \
-			if (next == pwmWriteTail) \
+		uint8_t next = (uint8_t)(pwmWriteHead[pwmReg] + 1); \
+		if (next == pwmWriteTail[pwmReg]) { \
+			pwmWriteTail[pwmReg] = PWM_WRITE_TAIL_N(pwmReg); \
+			if (next == pwmWriteTail[pwmReg]) \
 				break; \
 		} \
-		PWM_WRITE_ENTRIES[pwmWriteHead] = PWM_QUEUE_ENTRY(pwmReg, (sample)); \
-		pwmWriteHead = next; \
-		PWM_WRITE_HEAD = pwmWriteHead; \
+		PWM_WRITE_ENTRIES_N(pwmReg)[pwmWriteHead[pwmReg]] = (uint16_t)(sample) & 0x0FFF; \
+		pwmWriteHead[pwmReg] = next; \
+		PWM_WRITE_HEAD_N(pwmReg) = pwmWriteHead[pwmReg]; \
 		prev_val[pwmReg] = (sample); \
 	} while (0)
 
 void VGMPlay_32X_Sub() {
 	uint8_t pwmReg = 4;
 	uint16_t pwmHighData = 0;
-	uint16_t pwmWriteHead = PWM_WRITE_HEAD;
-	uint16_t pwmWriteTail = PWM_WRITE_TAIL;
+	uint8_t pwmWriteHead[5] = {
+		PWM_WRITE_HEAD_N(0), PWM_WRITE_HEAD_N(1), PWM_WRITE_HEAD_N(2),
+		PWM_WRITE_HEAD_N(3), PWM_WRITE_HEAD_N(4)
+	};
+	uint8_t pwmWriteTail[5] = {
+		PWM_WRITE_TAIL_N(0), PWM_WRITE_TAIL_N(1), PWM_WRITE_TAIL_N(2),
+		PWM_WRITE_TAIL_N(3), PWM_WRITE_TAIL_N(4)
+	};
 	
 	for(;;)
 	{
@@ -159,5 +163,7 @@ void VGMPlay_32X_Sub() {
 }
 
 #undef PWM_ENQUEUE
-#undef PWM_QUEUE_ENTRY
+#undef PWM_WRITE_HEAD_N
+#undef PWM_WRITE_TAIL_N
+#undef PWM_WRITE_ENTRIES_N
 

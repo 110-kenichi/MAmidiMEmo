@@ -66,7 +66,7 @@ namespace zanac.VGMPlayer
             private set;
         }
 
-        protected void NotifyProcessLoadOccurred()
+        internal void NotifyProcessLoadOccurred()
         {
             HighLoad = true;
             ProcessLoadOccurred?.Invoke(this, EventArgs.Empty);

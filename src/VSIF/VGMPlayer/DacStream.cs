@@ -103,6 +103,8 @@ namespace zanac.VGMPlayer
             long freq, before, after;
             QueryPerformanceFrequency(out freq);
 
+            VGMSong vgmSong = parentSong as VGMSong;
+
             while (true)
             {
                 if (disposedValue)
@@ -185,7 +187,7 @@ namespace zanac.VGMPlayer
                             byte dataHi = pd.DacData[pd.StreamIdx];
                             pd.StreamIdx += pd.StreamIdxDir;
 
-                            ((VGMSong)parentSong).DeferredWritePWMReg((cc << 4) + (dataHi & 0xf), data);
+                            vgmSong.DeferredWritePWMReg((cc << 4) + (dataHi & 0xf), data);
 
                             if (pd.CurrentStreamData.StreamDataBanks[3].StepSize == 2)
                             {
@@ -195,16 +197,16 @@ namespace zanac.VGMPlayer
                                 dataHi = pd.DacData[pd.StreamIdx];
                                 pd.StreamIdx += pd.StreamIdxDir;
                                 if (cc == 2)
-                                    ((VGMSong)parentSong).DeferredWritePWMReg(((cc + 1) << 4) + (dataHi & 0xf), data);
+                                    vgmSong.DeferredWritePWMReg(((cc + 1) << 4) + (dataHi & 0xf), data);
                                 else if (cc == 3)
-                                    ((VGMSong)parentSong).DeferredWritePWMReg(((cc - 1) << 4) + (dataHi & 0xf), data);
+                                    vgmSong.DeferredWritePWMReg(((cc - 1) << 4) + (dataHi & 0xf), data);
                             }
 
                             sampleRate = pd.CurrentStreamData.Frequency;
                         }
                         break;
                     case 20:    //NES
-                        ((VGMSong)parentSong).DeferredWriteNES(0x11, data);
+                        vgmSong.DeferredWriteNES(0x11, data);
                         sampleRate = pd.CurrentStreamData.Frequency;
                         break;
                     case 23:    //okim6258
@@ -276,16 +278,36 @@ namespace zanac.VGMPlayer
                         break;
                     case 27:    //PCE
                         if (pp != 0xff)
-                            ((VGMSong)parentSong).DeferredWritePCE(pp, cc);
-                        ((VGMSong)parentSong).DeferredWritePCE(0x06, data);
+                            vgmSong.DeferredWritePCE(pp, cc);
+                        vgmSong.DeferredWritePCE(0x06, data);
                         sampleRate = pd.CurrentStreamData.Frequency;
                         break;
                 }
+                vgmSong.FlushDeferredWriteData();
 
-                QueryPerformanceCounter(out after);
+                sampleRate *= vgmSong.PlaybackSpeed;
+
                 double nextTime = pd.BeforeTime + ((double)freq / (sampleRate / (double)multiply));
-                while (after < nextTime)
-                    QueryPerformanceCounter(out after);
+                QueryPerformanceCounter(out after);
+                if (after > nextTime)
+                {
+                    vgmSong.NotifyProcessLoadOccurred();
+                    switch (Program.Default.WaitAlg)
+                    {
+                        case 0: //Accurate
+                            break;
+                        case 1: //Wait
+                            vgmSong.FlushDeferredWriteDataAndWait();
+                            QueryPerformanceCounter(out after);
+                            nextTime = after;
+                            break;
+                    }
+                }
+                else
+                {
+                    while (after < nextTime)
+                        QueryPerformanceCounter(out after);
+                }
                 pd.BeforeTime = nextTime;
             }
         }
