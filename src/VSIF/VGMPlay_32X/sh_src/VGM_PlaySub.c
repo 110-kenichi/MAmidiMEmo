@@ -34,12 +34,12 @@ uint32 address_table[16] = {
 static uint16_t prev_val[5] = {
 	0, 0, 0, 0, 0
 };
-volatile uint8_t g_pwmWriteHead = 0;
-volatile uint8_t g_pwmWriteTail = 0;
-volatile uint16_t g_pwmWriteEntries[256];
+volatile uint16_t g_pwmWriteHead = 0;
+volatile uint16_t g_pwmWriteTail = 0;
+volatile uint16_t g_pwmWriteEntries[1024];
 
-#define PWM_WRITE_HEAD (*(volatile uint8_t *)((uint32_t)&g_pwmWriteHead + MARS_UNCACHED_OFFSET))
-#define PWM_WRITE_TAIL (*(volatile uint8_t *)((uint32_t)&g_pwmWriteTail + MARS_UNCACHED_OFFSET))
+#define PWM_WRITE_HEAD (*(volatile uint16_t *)((uint32_t)&g_pwmWriteHead + MARS_UNCACHED_OFFSET))
+#define PWM_WRITE_TAIL (*(volatile uint16_t *)((uint32_t)&g_pwmWriteTail + MARS_UNCACHED_OFFSET))
 #define PWM_WRITE_ENTRIES ((volatile uint16_t *)((uint32_t)&g_pwmWriteEntries[0] + MARS_UNCACHED_OFFSET))
 
 #define PWM_QUEUE_ENTRY(reg, data) (uint16_t)((((uint16_t)(reg)) << 12) | ((uint16_t)(data) & 0x0FFF))
@@ -48,7 +48,7 @@ void Mars_Play_Beep_Short(void);
 
 #define PWM_ENQUEUE(sample) \
 	do { \
-		uint8_t next = (uint8_t)(pwmWriteHead + 1); \
+		uint16_t next = (uint16_t)((pwmWriteHead + 1) & 0x03FF); \
 		if (next == pwmWriteTail) { \
 			pwmWriteTail = PWM_WRITE_TAIL; \
 			if (next == pwmWriteTail) \
@@ -63,8 +63,8 @@ void Mars_Play_Beep_Short(void);
 void VGMPlay_32X_Sub() {
 	uint8_t pwmReg = 4;
 	uint16_t pwmHighData = 0;
-	uint8_t pwmWriteHead = PWM_WRITE_HEAD;
-	uint8_t pwmWriteTail = PWM_WRITE_TAIL;
+	uint16_t pwmWriteHead = PWM_WRITE_HEAD;
+	uint16_t pwmWriteTail = PWM_WRITE_TAIL;
 	
 	for(;;)
 	{

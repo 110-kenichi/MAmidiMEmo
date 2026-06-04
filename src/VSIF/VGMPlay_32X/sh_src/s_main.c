@@ -4,12 +4,12 @@
 #define MARS_PWM_FIFO_FULL 0x8000
 #define MARS_UNCACHED_OFFSET 0x20000000
 
-extern volatile uint8_t g_pwmWriteHead;
-extern volatile uint8_t g_pwmWriteTail;
-extern volatile uint16_t g_pwmWriteEntries[256];
+extern volatile uint16_t g_pwmWriteHead;
+extern volatile uint16_t g_pwmWriteTail;
+extern volatile uint16_t g_pwmWriteEntries[1024];
 
-#define PWM_WRITE_HEAD (*(volatile uint8_t *)((uint32_t)&g_pwmWriteHead + MARS_UNCACHED_OFFSET))
-#define PWM_WRITE_TAIL (*(volatile uint8_t *)((uint32_t)&g_pwmWriteTail + MARS_UNCACHED_OFFSET))
+#define PWM_WRITE_HEAD (*(volatile uint16_t *)((uint32_t)&g_pwmWriteHead + MARS_UNCACHED_OFFSET))
+#define PWM_WRITE_TAIL (*(volatile uint16_t *)((uint32_t)&g_pwmWriteTail + MARS_UNCACHED_OFFSET))
 #define PWM_WRITE_ENTRIES ((volatile uint16_t *)((uint32_t)&g_pwmWriteEntries[0] + MARS_UNCACHED_OFFSET))
 
 static volatile uint16_t *const pwm_regs[5] = {
@@ -66,7 +66,7 @@ void Mars_Play_Beep_Short_Slave(void) {
 
 
 void s_main(void) {
-    uint8_t pwmTail = PWM_WRITE_TAIL;
+    uint16_t pwmTail = PWM_WRITE_TAIL;
 
 	while (MARS_SYS_INT_CTRL & 0x8000) {}
 	
@@ -81,15 +81,15 @@ void s_main(void) {
 	//Mars_Play_Beep_Short_Slave();
 
 	for(;;) {
-        uint8_t pwmHead = PWM_WRITE_HEAD;
+        uint16_t pwmHead = PWM_WRITE_HEAD;
 		if (pwmTail != pwmHead) {
             uint16_t pwmEntry = PWM_WRITE_ENTRIES[pwmTail];
             uint8_t pwmReg = (uint8_t)((pwmEntry >> 12) & 0x07);
             uint16_t pwmData = pwmEntry & 0x0FFF;
-			pwmTail = (uint8_t)(pwmTail + 1);
+			pwmTail = (uint16_t)((pwmTail + 1) & 0x03FF);
             PWM_WRITE_TAIL = pwmTail;
 
-			while (MARS_PWM_CTRL & MARS_PWM_FIFO_FULL) {}
+			while (*pwm_regs[pwmReg] & MARS_PWM_FIFO_FULL) {}
 			*pwm_regs[pwmReg] = pwmData;
 		}
 	}
