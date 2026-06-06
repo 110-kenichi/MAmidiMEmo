@@ -76,6 +76,8 @@ namespace zanac.VGMPlayer
         private Dictionary<(byte tt, byte st), (byte bd, byte bc, uint[] values)> decompressionTables
             = new Dictionary<(byte tt, byte st), (byte bd, byte bc, uint[] values)>();
 
+        private Dictionary<byte, List<byte>> dataBlockTables = new Dictionary<byte, List<byte>>();
+
         private Dictionary<int, StreamData> streamTable = new Dictionary<int, StreamData>();
 
         private SegaPcm segaPcm;
@@ -468,6 +470,7 @@ namespace zanac.VGMPlayer
             if (comPortMCD != null)
             {
                 DeferredWriteMCDReg(0x08, 0xFF); // koff all
+                DeferredWriteMCDReg(0x07, 0x00); // IC OFF
             }
             //SAA1099
             if (comPortSAA != null)
@@ -1298,25 +1301,22 @@ namespace zanac.VGMPlayer
                     Accepted = true;
 
                     //HACK: sync clk
-                    DeferredWriteMCDReg(8, (byte)0xff); // dummy key off
-                    DeferredWriteMCDReg(8, (byte)0xff); // dummy key off
+                    DeferredWriteMCDReg(8, (byte)0xff); // key off
+                    DeferredWriteMCDReg(8, (byte)0xff); // key off
 
-                    //debug
-                    //DeferredWriteMCDReg(0x0F, 0xc0); // SON ch
-                    //DeferredWriteMCDReg(0x0D, 0x00); // PCM ADR
-                    //DeferredWriteMCDReg(0x0B, 0x00); // LOOP
-                    //DeferredWriteMCDReg(0x09, 0x00); // LOOP
-                    //DeferredWriteMCDReg(0x07, 0x08); // pitch hi
-                    //DeferredWriteMCDReg(0x05, 0x08); // pitch lo
-                    //DeferredWriteMCDReg(0x03, 0xff); // pan
-                    //DeferredWriteMCDReg(0x01, 0xff); // vol
-                    //DeferredWriteMCDReg(0x01, 0xFF); // vol
+                    for (int i = 7; i >= 0; i--)
+                    {
+                        DeferredWriteMCDReg(7, (byte)(0xC0 + i));
+                        DeferredWriteMCDReg(0, 0);
+                        DeferredWriteMCDReg(1, 0);
+                        DeferredWriteMCDReg(2, 0);
+                        DeferredWriteMCDReg(3, 0);
+                        DeferredWriteMCDReg(4, 0);
+                        DeferredWriteMCDReg(5, 0);
+                        DeferredWriteMCDReg(6, 0);
+                    }
 
-                    //DeferredWriteMCDReg(0x08, 0xfe); // kon ch0
-                    //DeferredWriteMCDReg(0x08, 0xfe); // kon ch0
-
-                    //DeferredWriteMCDReg(0x08, 0xff); // kon ch0
-                    //DeferredWriteMCDReg(0x08, 0xff); // kon ch0
+                    comPortMCD.FlushDeferredWriteDataAndWait();
 
                     return true;
                 }
@@ -4276,6 +4276,7 @@ namespace zanac.VGMPlayer
                                                 {
                                                     case 0: //YM2612 PCM data for use with associated commands
                                                         {
+                                                            // Data Block
                                                             dacDataOffset.Add(dacData.Count);
                                                             dacDataLength.Add((int)size);
                                                             if (size == 0)
@@ -4287,9 +4288,12 @@ namespace zanac.VGMPlayer
                                                     case 1: //RF5C68  PCM data for use with associated commands
                                                     case 2: //RF5C164 PCM data for use with associated commands
                                                         {
+                                                            // Data Block
                                                             uint saddr = 0;
                                                             List<byte> dd = new List<byte>();
                                                             dd.AddRange(vgmReader.ReadBytes((int)size));
+
+                                                            Debug.WriteLine("MCD Mem: " + saddr.ToString("X4") + " " + size.ToString("X4"));
 
                                                             if (comPortMCD != null)
                                                             {
@@ -4308,7 +4312,9 @@ namespace zanac.VGMPlayer
                                                                         if (bank != prevbank)
                                                                         {
                                                                             //Write mode and select mem bank
-                                                                            DeferredWriteMCDReg(0x7, bank);
+                                                                            //DeferredWriteMCDReg(0x7, bank);
+                                                                            DeferredWriteMCDReg(0x7, (byte)((lastMcdControlData & 0x80) | bank));
+                                                                            //DeferredWriteMCDReg(0x7, (byte)(0x80 | bank));  //HACK:
                                                                             prevbank = bank;
                                                                         }
                                                                         //Write PCM DATA
@@ -4334,13 +4340,13 @@ namespace zanac.VGMPlayer
                                                                         comPortMCD?.FlushDeferredWriteDataAndWait();
                                                                         break;
                                                                 }
-                                                                DeferredWriteMCDReg(0x08, 0xFF); //HACK: koff all
                                                                 FormMain.TopForm.SetStatusText("RF5C164: Transferred PCM.");
                                                             }
                                                         }
                                                         break;
                                                     case 3: //PWM PCM data for use with associated commands
                                                         {
+                                                            // Data Block
                                                             dacDataOffset.Add(dacData.Count);
                                                             dacDataLength.Add((int)size);
                                                             if (size == 0)
@@ -4351,6 +4357,7 @@ namespace zanac.VGMPlayer
                                                         break;
                                                     case 4: //OKIM6258 ADPCM data for use with associated commands
                                                         {
+                                                            // Data Block
                                                             dacDataOffset.Add(dacData.Count);
                                                             dacDataLength.Add((int)size);
                                                             if (size == 0)
@@ -4376,6 +4383,7 @@ namespace zanac.VGMPlayer
                                                         break;
                                                     case 5: //HuC6280 PCM data for use with associated commands
                                                         {
+                                                            // Data Block
                                                             dacDataOffset.Add(dacData.Count);
                                                             dacDataLength.Add((int)size);
                                                             if (size == 0)
@@ -4386,6 +4394,7 @@ namespace zanac.VGMPlayer
                                                         break;
                                                     case 7: //NES DPCM data for use with associated commands
                                                         {
+                                                            // Data Block
                                                             dacDataOffset.Add(dacData.Count);
                                                             dacDataLength.Add((int)size);
                                                             if (size == 0)
@@ -4405,6 +4414,7 @@ namespace zanac.VGMPlayer
                                                     case 0x47: //NES DPCM compressed
                                                     case int compDtype when (compDtype >= 0x48 && compDtype <= 0x7E):
                                                         {
+                                                            // Data Block
                                                             // 圧縮データヘッダ (10 bytes):
                                                             //   tt (8 bits)         = 圧縮タイプ (0=ビットパッキング, 1=DPCM)
                                                             //   ss ss ss ss (32 bits)= 非圧縮サイズ (バイト単位)
@@ -4444,6 +4454,9 @@ namespace zanac.VGMPlayer
                                                                         byte prevbank = 0xff;
                                                                         int percentage = 0;
                                                                         int lastPercentage = -1;
+
+                                                                        Debug.WriteLine("MCD Comp Mem: " + decompressed.Length.ToString("X4"));
+
                                                                         for (int i = 0; i < decompressed.Length; i++)
                                                                         {
                                                                             if (i <= 8)
@@ -4455,7 +4468,8 @@ namespace zanac.VGMPlayer
                                                                                 byte bank = (byte)(((i - 0x1000) >> 12) & 0xf);
                                                                                 if (bank != prevbank)
                                                                                 {
-                                                                                    DeferredWriteMCDReg(0x7, bank);
+                                                                                    DeferredWriteMCDReg(0x7, (byte)((lastMcdControlData & 0x80) | bank));
+                                                                                    //DeferredWriteMCDReg(0x7, (byte)(0x80 | bank));  //HACK:
                                                                                     prevbank = bank;
                                                                                 }
                                                                                 DeferredWriteMCDMem((i - 0x1000) & 0xfff, decompressed[i]);
@@ -4480,7 +4494,6 @@ namespace zanac.VGMPlayer
                                                                                 comPortMCD?.FlushDeferredWriteDataAndWait();
                                                                                 break;
                                                                         }
-                                                                        DeferredWriteMCDReg(0x08, 0xFF);
                                                                         FormMain.TopForm.SetStatusText("RF5C164: Transferred PCM.");
                                                                     }
                                                                     break;
@@ -4530,7 +4543,7 @@ namespace zanac.VGMPlayer
                                                             decompressionTables[(tt, st)] = (bd, bc, tableValues);
                                                         }
                                                         break;
-                                                    case 0x80:  //SEGA PCM
+                                                    case 0x80:  //SEGA PCM Data Block
                                                         {
                                                             uint romSize = vgmReader.ReadUInt32();
                                                             uint saddr = vgmReader.ReadUInt32();
@@ -4547,7 +4560,7 @@ namespace zanac.VGMPlayer
                                                             segaPcm?.sega_pcm_write_rom(0, (int)romSize, (int)saddr, (int)size, dat);
                                                         }
                                                         break;
-                                                    case 0x81:  //YM2608
+                                                    case 0x81:  //YM2608 Data Block
                                                         {
                                                             uint romSize = vgmReader.ReadUInt32();
                                                             uint saddr = vgmReader.ReadUInt32();
@@ -4626,7 +4639,7 @@ namespace zanac.VGMPlayer
                                                             }
                                                         }
                                                         break;
-                                                    case 0x88:  //YM8950
+                                                    case 0x88:  //YM8950 Data Block
                                                         {
                                                             uint romSize = vgmReader.ReadUInt32();
                                                             uint saddr = vgmReader.ReadUInt32();
@@ -4669,7 +4682,7 @@ namespace zanac.VGMPlayer
                                                             FlushDeferredWriteData();
                                                         }
                                                         break;
-                                                    case 0x8b: //OKIM6295
+                                                    case 0x8b: //OKIM6295 Data Block
                                                         {
                                                             uint romSize = vgmReader.ReadUInt32();
                                                             uint saddr = vgmReader.ReadUInt32();
@@ -4679,7 +4692,7 @@ namespace zanac.VGMPlayer
                                                             okim6295?.okim6295_write_rom(0, (int)romSize, (int)saddr, (int)size, dat);
                                                         }
                                                         break;
-                                                    case 0x8E:  //K053260 PCM
+                                                    case 0x8E:  //K053260 PCM Data Block
                                                         {
                                                             uint romSize = vgmReader.ReadUInt32();
                                                             uint saddr = vgmReader.ReadUInt32();
@@ -4697,26 +4710,35 @@ namespace zanac.VGMPlayer
 
                                                             break;
                                                         }
-                                                    case 0xc0:  //RF5C68
-                                                    case 0xc1:  //RF5C164
+                                                    case 0xc0:  //RF5C68 Data Block
+                                                    case 0xc1:  //RF5C164 Data Block
                                                         {
                                                             uint saddr = vgmReader.ReadUInt16();
                                                             size -= 2;
                                                             List<byte> dd = new List<byte>();
                                                             dd.AddRange(vgmReader.ReadBytes((int)size));
 
+                                                            if (!dataBlockTables.ContainsKey((byte)dtype))
+                                                                dataBlockTables.Add((byte)dtype, dd);
+                                                            else
+                                                                dataBlockTables[(byte)dtype] = dd;
+
                                                             if (comPortMCD != null)
                                                             {
                                                                 byte prevbank = 0xff;
                                                                 int percentage = 0;
                                                                 int lastPercentage = -1;
+
+                                                                Debug.WriteLine("MCD Block Mem: " + saddr.ToString("X4") + " " + dd.Count.ToString("X4"));
+
                                                                 for (var i = 0; i < dd.Count; i++)
                                                                 {
                                                                     byte bank = (byte)(0x00 | (((saddr + i) >> 12) & 0xf));
                                                                     if (bank != prevbank)
                                                                     {
                                                                         //Write mode and select mem bank
-                                                                        DeferredWriteMCDReg(0x7, bank);
+                                                                        DeferredWriteMCDReg(0x7, (byte)((lastMcdControlData & 0x80) | bank));
+                                                                        //DeferredWriteMCDReg(0x7, (byte)(0x80 | bank));  //HACK:
                                                                         prevbank = bank;
                                                                     }
                                                                     //Write PCM DATA
@@ -4743,7 +4765,6 @@ namespace zanac.VGMPlayer
                                                                         comPortMCD?.FlushDeferredWriteDataAndWait();
                                                                         break;
                                                                 }
-                                                                DeferredWriteMCDReg(0x08, 0xFF); //HACK: koff all
                                                                 FormMain.TopForm.SetStatusText("RF5C164: Transferred PCM.");
                                                             }
 
@@ -4784,9 +4805,70 @@ namespace zanac.VGMPlayer
                                             int wofset = readByte() | (readByte() << 8) | (readByte() << 16);
                                             //size of data, in bytes
                                             int size = readByte() | (readByte() << 8) | (readByte() << 16);
-                                            vgmReader.ReadBytes((int)size);
+
+                                            switch (ct)
+                                            {
+                                                case 1: //RF5C68  PCM data for use with associated commands
+                                                case 2: //RF5C164 PCM data for use with associated commands
+                                                    {
+                                                        Debug.WriteLine("MCD RAM: " + wofset.ToString("X4") + " " + size.ToString("X4"));
+
+                                                        byte dtype = (byte)(0xc0 + ct - 1);
+                                                        if (!dataBlockTables.ContainsKey(dtype))
+                                                            break;
+                                                        byte[] pcmData = dataBlockTables[dtype].ToArray();
+
+                                                        if (comPortMCD != null)
+                                                        {
+                                                            byte prevbank = 0xff;
+                                                            int percentage = 0;
+                                                            int lastPercentage = -1;
+                                                            for (var i = rofset; i < pcmData.Length; i++)
+                                                            {
+                                                                if (i <= 8)
+                                                                {
+                                                                    DeferredWriteMCDReg((int)(i & 0x1f), pcmData[(int)i]);
+                                                                }
+                                                                else if (i >= 0x1000)
+                                                                {
+                                                                    byte bank = (byte)(0x00 | (((i - 0x1000) >> 12) & 0xf));
+                                                                    if (bank != prevbank)
+                                                                    {
+                                                                        //Write mode and select mem bank
+                                                                        DeferredWriteMCDReg(0x7, (byte)((lastMcdControlData & 0x80) | bank));
+                                                                        //DeferredWriteMCDReg(0x7, (byte)(0x80 | bank));  //HACK:
+                                                                        prevbank = bank;
+                                                                    }
+                                                                    //Write PCM DATA
+                                                                    //Hack: Skip DeferredWriteMCDMem((int)((i - 0x1000) & 0xfff), pcmData[(int)i]);
+
+                                                                    percentage = (int)((100 * i) / pcmData.Length);
+                                                                    if (percentage != lastPercentage)
+                                                                    {
+                                                                        lastPercentage = percentage;
+                                                                        FormMain.TopForm.SetStatusText("RF5C164: Transferring PCM(" + percentage + "%)");
+                                                                        switch (comPortMCD.SoundModuleType)
+                                                                        {
+                                                                            case VsifSoundModuleType.Genesis_FTDI:
+                                                                                comPortMCD?.FlushDeferredWriteDataAndWait();
+                                                                                break;
+                                                                        }
+                                                                    }
+                                                                }
+                                                            }
+                                                            switch (comPortMCD.SoundModuleType)
+                                                            {
+                                                                case VsifSoundModuleType.Genesis_FTDI:
+                                                                    comPortMCD?.FlushDeferredWriteDataAndWait();
+                                                                    break;
+                                                            }
+                                                            FormMain.TopForm.SetStatusText("RF5C164: Transferred PCM.");
+                                                        }
+                                                    }
+                                                    break;
+                                            }
+                                            break;
                                         }
-                                        break;
 
                                     case int cmd when 0x70 <= cmd && cmd <= 0x7F:
                                         {
@@ -5513,6 +5595,8 @@ namespace zanac.VGMPlayer
                                             {
                                                 DeferredWriteMCDMem((aa << 8) | bb, (byte)dd);
 
+                                                Debug.WriteLine("MCD 1 Mem: " + ((aa << 8) | bb).ToString("X4") + " " + dd.ToString("X2"));
+
                                                 var bank = 0;
                                                 if (comPortMCD.RegTable.ContainsKey(0x100 + 7))
                                                     bank = (comPortMCD.RegTable[0x100 + 7]) << 12;
@@ -5521,13 +5605,13 @@ namespace zanac.VGMPlayer
                                                 switch (comPortMCD.SoundModuleType)
                                                 {
                                                     case VsifSoundModuleType.Genesis_FTDI:
-                                                        //comPortMCD?.FlushDeferredWriteDataAndWait();
+                                                        comPortMCD?.FlushDeferredWriteDataAndWait();
                                                         break;
                                                 }
                                             }
                                             //HACK:
-                                            QueryPerformanceCounter(out before);
-                                            dbefore = before;
+                                            //QueryPerformanceCounter(out before);
+                                            //dbefore = before;
                                             break;
                                         }
 
@@ -6275,6 +6359,7 @@ namespace zanac.VGMPlayer
             }
         }
 
+        private byte lastMcdControlData = 0;
 
         public void DeferredWriteMCDReg(int adrs, byte dt)
         {
@@ -6282,6 +6367,9 @@ namespace zanac.VGMPlayer
                 return;
             if (0 <= adrs && adrs <= 8)
             {
+                Debug.WriteLine("MCD Reg: " + adrs.ToString("X2") + " " + dt.ToString("X2"));
+                if (adrs == 7)
+                    lastMcdControlData = dt;
                 switch (comPortMCD.SoundModuleType)
                 {
                     case VsifSoundModuleType.Genesis_FTDI:
@@ -6308,20 +6396,30 @@ namespace zanac.VGMPlayer
         }
 
         private byte mcdClk = 0x80;
+        private ushort? lastMcdAddress;
 
         private void sendMcdData(ushort address, byte data, int f_ftdiClkWidth, bool wait)
         {
-            comPortMCD.DeferredWriteData(0, 10 << 2, data, f_ftdiClkWidth);
-            comPortMCD.DeferredWriteData(0, 9 << 2, (byte)(address & 0xff), f_ftdiClkWidth);
-            comPortMCD.DeferredWriteData(0, 8 << 2, (byte)(((address >> 8) & 0x3f) | mcdClk), f_ftdiClkWidth);
+            address &= 0x3fff;
+            byte increment = 0;
+            byte type = address <= 0x11 ? (byte)1 : (byte)0;
+            comPortMCD.DeferredWriteData(type, 10 << 2, data, f_ftdiClkWidth);
+            //前回と同じアドレスへのアクセスの場合、アドレスの送信を省略してクロックだけ送る
+            if (lastMcdAddress.HasValue && lastMcdAddress.Value + 2 == address)
+                increment = 0x40;
+            else
+                comPortMCD.DeferredWriteData(type, 9 << 2, (byte)(address & 0xff), f_ftdiClkWidth);
+            comPortMCD.DeferredWriteData(type, 8 << 2, (byte)(mcdClk | increment | (address >> 8)), f_ftdiClkWidth);
+            lastMcdAddress = address;
 
             mcdClk ^= 0x80;
 
             if (wait)
             {
-                comPortMCD.DeferredWriteData(0xff, 0, 0, f_ftdiClkWidth);
-                comPortMCD.DeferredWriteData(0xff, 0, 0, f_ftdiClkWidth);
-                comPortMCD.DeferredWriteData(0xff, 0, 0, f_ftdiClkWidth);
+                //384 clk over
+                //comPortMCD.DeferredWriteData(0xff, 0, 0, f_ftdiClkWidth);
+                //comPortMCD.DeferredWriteData(0xff, 0, 0, f_ftdiClkWidth);
+                //comPortMCD.DeferredWriteData(0xff, 0, 0, f_ftdiClkWidth);
             }
         }
 

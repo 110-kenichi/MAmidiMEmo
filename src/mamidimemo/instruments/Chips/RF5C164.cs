@@ -429,21 +429,32 @@ namespace zanac.MAmidiMEmo.Instruments.Chips
         }
 
         private byte mcdClk = 0x80;
+        private ushort? lastMcdAddress;
 
         private void sendData(ushort address, byte data, bool wait)
         {
+            address &= 0x3fff;
+            byte increment = 0;
+            byte type = address <= 0x11 ? (byte)1 : (byte)0;
+
             List<PortWriteData> list = new List<PortWriteData>();
-            list.Add(new PortWriteData() { Type = 0, Address = 10 << 2, Data = data, Wait = f_ftdiClkWidth });
-            list.Add(new PortWriteData() { Type = 0, Address = 9 << 2, Data = (byte)(address & 0xff), Wait = f_ftdiClkWidth });
-            list.Add(new PortWriteData() { Type = 0, Address = 8 << 2, Data = (byte)(((address >> 8) & 0x3f) | mcdClk), Wait = f_ftdiClkWidth });
+            list.Add(new PortWriteData() { Type = type, Address = 10 << 2, Data = data, Wait = f_ftdiClkWidth });
+
+            //前回と同じアドレスへのアクセスの場合、アドレスの送信を省略してクロックだけ送る
+            if (lastMcdAddress.HasValue && lastMcdAddress.Value + 2 == address)
+                increment = 0x40;
+            else
+                list.Add(new PortWriteData() { Type = type, Address = 9 << 2, Data = (byte)(address & 0xff), Wait = f_ftdiClkWidth });
+            list.Add(new PortWriteData() { Type = type, Address = 8 << 2, Data = (byte)(mcdClk | increment | (address >> 8)), Wait = f_ftdiClkWidth });
 
             mcdClk ^= 0x80;
 
             if (wait)
             {
-                list.Add(new PortWriteData() { Type = 0xff, Address = 0, Data = 0, Wait = f_ftdiClkWidth });
-                list.Add(new PortWriteData() { Type = 0xff, Address = 0, Data = 0, Wait = f_ftdiClkWidth });
-                list.Add(new PortWriteData() { Type = 0xff, Address = 0, Data = 0, Wait = f_ftdiClkWidth });
+                //384 clk over
+                //list.Add(new PortWriteData() { Type = 0xff, Address = 0, Data = 0, Wait = f_ftdiClkWidth });
+                //list.Add(new PortWriteData() { Type = 0xff, Address = 0, Data = 0, Wait = f_ftdiClkWidth });
+                //list.Add(new PortWriteData() { Type = 0xff, Address = 0, Data = 0, Wait = f_ftdiClkWidth });
             }
             vsifClient.WriteData(list.ToArray());
         }

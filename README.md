@@ -1,4 +1,4 @@
-MAmidiMEmo 6.5.5.1 Itoken (c)2019, 2026 / GPL-2.0
+MAmidiMEmo 6.5.6.0 Itoken (c)2019, 2026 / GPL-2.0
 
 *** What is the MAmidiMEmo? ***
 
@@ -278,6 +278,8 @@ e.g.) YM2151 has 8ch FM sounds, so you can play 8 chords on MIDI 1ch or sharing 
    [![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=SNQ9JE3JAQMNQ)
 
 *** Changes
+- 6.5.6.0 A bit improved SEGA CD PCM transfer speed.
+  - NOTE: Be sure to update the VGMPlay_32X.32x & VGMPlay_mdcd.bin
 - 6.5.5.1 Fixed "PWM(SEGA 32X)" PWM buffer handling to reduce noise for VGMPlayer.
   - NOTE: Be sure to update the VGMPlay_32X.32x
 - 6.5.5.0 Improved "PWM(SEGA 32X)" transfer FTDI Speed to 8 from 9 for VGMPlayer.

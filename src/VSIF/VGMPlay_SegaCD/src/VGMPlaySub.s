@@ -205,6 +205,7 @@ loc_292:
 	move.w #0, (GA_CDD_FADER).w
 
     move.b  #0xFF,0xFF0011  | KOFF ALL
+    move.b  #0xC0,0xFF000F  | SON ch0
 
 CD_Main:
     move.l  #0xFF8010,%a0              | COMM CMD Address Offset(2bytes)
@@ -215,6 +216,9 @@ CD_Main:
 
     move.b  #7,%d2                     | for Check Bit 7 of COMM CMD ADRS Hi to sync with CD
     move.w  #0x3FFF,%d3                | Mask
+    move.b  #14,%d4                    | bit 14 を検査するフラグ（アドレス自動インクリメント判定）
+
+    moveq.l #0,%d5                     | Temp for PCM address offset
 
     move.b  #0x55,0xFF800F             | Set OK
 
@@ -234,15 +238,35 @@ CD_PCM_LOOP:
     btst.b  %d2,(%a0)                         |+12 12  Check
     beq.b   CD_PCM_LOOP                       | +8 20   
     move.w  (%a0),%d0                         | +8 28  Address Offset
-    and.w   %d3,%d0                           | +4 32  Mask
-    move.b  (%a1),(%a3, %d0.w)                |+18 50  Write DATA to register
+
+    btst    %d4,%d0                           | +6 34     
+    bne.b   CD_PCM_INC                        |+10 44   
+
+    move.w  %d0,%d5                           | +4 48
+    and.w   %d3,%d5                           | +4 52
+
+    subq.w  #2,%d5                            | +4 56
+CD_PCM_INC:
+    addq.w  #2,%d5                            | +4 60
+    move.b  (%a1),(%a3, %d5.w)                |+18 78  Write DATA to register
 
 CD_PCM_LOOP_2:
     btst.b  %d2,(%a0)                         |+12 12  Check
     bne.b   CD_PCM_LOOP_2                     | +8 20   
     move.w  (%a0),%d0                         | +8 28  Address Offset
-    move.b  (%a1),(%a3, %d0.w)                |+18 46  Write DATA to register
-    bra.s   CD_PCM_LOOP                       |+10 56  
+
+    btst    %d4,%d0                           | +6 34     
+    bne.b   CD_PCM_INC_2                      |+10 44   
+
+    move.w  %d0,%d5                           | +4 48
+    and.w   %d3,%d5                           | +4 52
+
+    subq.w  #2,%d5                            | +4 56
+CD_PCM_INC_2:
+    addq.w  #2,%d5                            | +4 60
+    move.b  (%a1),(%a3, %d5.w)                |+18 78  Write DATA to register
+
+    bra.s   CD_PCM_LOOP                       |+10 88  
 CD_PCM_PROC_END:
 
 |||||||||||||||||||||||| Debug
