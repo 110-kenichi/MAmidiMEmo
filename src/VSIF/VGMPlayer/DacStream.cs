@@ -138,7 +138,8 @@ namespace zanac.VGMPlayer
 
                 if (pd.StreamIdxDir > 0)
                 {
-                    if (pd.StreamIdx >= pd.CurrentStreamParam.Length)
+                    if (pd.StreamIdx >= pd.CurrentStreamParam.Offset + pd.CurrentStreamParam.Length ||
+                        pd.StreamIdx >= pd.DacData.Count)
                     {
                         if ((pd.CurrentStreamParam.Mode & StreamModes.Loop) != StreamModes.Loop)
                             streaming = false;
