@@ -26,6 +26,8 @@ namespace zanac.VGMPlayer
 
         private ListViewItem currentSongItem;
 
+        private volatile bool _progressUpdatePending;
+
         public static FormMain TopForm
         {
             get;
@@ -823,8 +825,14 @@ namespace zanac.VGMPlayer
             if (this.IsDisposed)
                 return;
 
+            // 既にUI更新がキューに積まれている場合はスキップして多重投入を防ぐ
+            if (_progressUpdatePending)
+                return;
+
+            _progressUpdatePending = true;
             this.BeginInvoke(new MethodInvoker(() =>
             {
+                _progressUpdatePending = false;
                 if (progressBarLoad.IsDisposed)
                     return;
                 if (progressBarLoad.Value <= 40)
