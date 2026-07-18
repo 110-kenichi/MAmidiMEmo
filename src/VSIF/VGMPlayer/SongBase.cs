@@ -1767,6 +1767,8 @@ namespace zanac.VGMPlayer
             lastOpnaDacValue = dacValue;
         }
 
+        private int lastOPN2DacEn;
+
         protected void deferredWriteOPN2_P0(VsifClient comPortOPN2, int adrs, int dt, uint dclk)
         {
             //ignore test and unknown registers
@@ -1828,6 +1830,13 @@ namespace zanac.VGMPlayer
         /// <param name="dt"></param>
         protected void deferredWriteOPN2_P0(VsifClient comPortOPN2, int adrs, int dt)
         {
+            if (adrs == 0x2b)
+            {
+                if (lastOPN2DacEn == (dt & 0x80))
+                    return;
+                lastOPN2DacEn = (dt & 0x80);
+            }
+
             switch (comPortOPN2.SoundModuleType)
             {
                 case VsifSoundModuleType.MSX_FTDI:

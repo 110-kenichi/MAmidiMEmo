@@ -3215,8 +3215,6 @@ namespace zanac.VGMPlayer
         private int y8950_pcm_start;
         private int y8950_pcm_stop;
 
-        private int lastOPN2DacEn;
-
         protected override void StreamSong()
         {
             vgmReader.BaseStream?.Seek(0, SeekOrigin.Begin);
@@ -3432,12 +3430,6 @@ namespace zanac.VGMPlayer
                                                         //output DAC
                                                         dt = (int)Math.Round((double)dt * (double)PcmMixer.DacVolume / 100d);
                                                         DeferredWriteOPN2_DAC(comPortOPN2, dt);
-                                                        break;
-                                                    case 0x2b:
-                                                        //Enable DAC
-                                                        if (lastOPN2DacEn != (dt & 0x80))
-                                                            deferredWriteOPN2_P0(comPortOPN2, adrs, dt, dclk);
-                                                        lastOPN2DacEn = (dt & 0x80);
                                                         break;
                                                     default:
                                                         deferredWriteOPN2_P0(comPortOPN2, adrs, dt, dclk);

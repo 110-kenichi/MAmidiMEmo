@@ -1,4 +1,4 @@
-MAmidiMEmo 6.5.6.2 Itoken (c)2019, 2026 / GPL-2.0
+MAmidiMEmo 6.5.6.3 Itoken (c)2019, 2026 / GPL-2.0
 
 *** What is the MAmidiMEmo? ***
 
@@ -265,6 +265,7 @@ e.g.) YM2151 has 8ch FM sounds, so you can play 8 chords on MIDI 1ch or sharing 
    4. MT-32 & CM32-P can not store/restore last settings.
    5. MAmidiMEmo process stuck after sound interface changed if you used SCCI interface.
    6. VSIF SEGA 32X reset button does not work. Please re-power on the SEGA 32X.
+   7. Use the 32X ROM only when playing VGM files designed exclusively for the 32X.
    
 *** How to create build environment ***
 
@@ -278,6 +279,7 @@ e.g.) YM2151 has 8ch FM sounds, so you can play 8 chords on MIDI 1ch or sharing 
    [![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=SNQ9JE3JAQMNQ)
 
 *** Changes
+- 6.5.6.3 Fixed DAC Streaming for VGMPlayer. Added limitation No7.
 - 6.5.6.2 Fixed freezing GUI for VGMPlayer.
 - 6.5.6.1 Fixed DAC Streaming loop handling for VGMPlayer.
 - 6.5.6.0 A bit improved SEGA CD PCM transfer speed.
