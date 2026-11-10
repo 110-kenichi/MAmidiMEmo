@@ -7020,7 +7020,7 @@ namespace zanac.VGMPlayer
         /// <param name="dt"></param>
         private void deferredWriteY8950(int adrs, int dt)
         {
-            switch (comPortOPLL.SoundModuleType)
+            switch (comPortY8950.SoundModuleType)
             {
                 case VsifSoundModuleType.MSX_FTDI:
                 case VsifSoundModuleType.TurboR_FTDI:
