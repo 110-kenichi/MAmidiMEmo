@@ -1767,7 +1767,7 @@ namespace zanac.VGMPlayer
             lastOpnaDacValue = dacValue;
         }
 
-        private int lastOPN2DacEn;
+        private int lastOPN2DacEn = -1;
 
         protected void deferredWriteOPN2_P0(VsifClient comPortOPN2, int adrs, int dt, uint dclk)
         {

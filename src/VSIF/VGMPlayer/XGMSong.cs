@@ -917,7 +917,7 @@ namespace zanac.VGMPlayer
             return data;
         }
 
-        private int lastOPN2DacEn;
+        private int lastOPN2DacEn = -1;
 
         protected override void StreamSong()
         {
